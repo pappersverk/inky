@@ -145,7 +145,7 @@ defmodule Inky do
     send_command(state, 0x7E, 0x3B)
 
     # Gate setting
-    send_command(state, 0x01, [packed_height | 0x00])
+    send_command(state, 0x01, :binary.list_to_bin(packed_height ++ [0x00]))
 
     # Gate driving voltage
     send_command(state, 0x03, [0b10000, 0b0001])
@@ -168,12 +168,12 @@ defmodule Inky do
     send_command(state, 0x3C, 0x00)
 
     # Set LUTs
-    send_command(state, 0x32, get_luts(:black))
+    send_command(state, 0x32, get_luts(:red))
 
     # Set RAM X Start/End
-    send_command(state, 0x44, [0x00, Float.floor(state.columns / 8) - 1])
+    send_command(state, 0x44, :binary.list_to_bin([0x00, trunc(state.columns / 8) - 1]))
     # Set RAM Y Start/End
-    send_command(state, 0x45, [0x00, 0x00] ++ packed_height)
+    send_command(state, 0x45, :binary.list_to_bin([0x00, 0x00] ++ packed_height))
 
     # 0x24 == RAM B/W, 0x26 == RAM Red/Yellow/etc
     for data <- [{0x24, buffer_a}, {0x26, buffer_b}] do
@@ -182,7 +182,7 @@ defmodule Inky do
       # Set RAM X Pointer start
       send_command(state, 0x4E, 0x00)
       # Set RAM Y Pointer start
-      send_command(state, 0x4F, [0x00, 0x00])
+      send_command(state, 0x4F, <<0x00, 0x00>>)
       send_command(state, cmd, buffer)
     end
 
