@@ -85,10 +85,13 @@ defmodule Inky do
   end
 
   def set_pixel(state = %State{}, x, y, value) do
-    if value in [state.white, state.black, state.red, state.yellow] do
-      _ = put_in(state.pixels[{x, y}], value)
-      # %{state | pixels: %{state.pixels | {x, y}: value} }
-    end
+    state =
+      if value in [state.white, state.black, state.red, state.yellow] do
+        put_in(state.pixels[{x, y}], value)
+        # %{state | pixels: %{state.pixels | {x, y}: value} }
+      else
+        state
+      end
 
     state
   end
@@ -106,7 +109,7 @@ defmodule Inky do
   # Private functionality
 
   defp busy_wait(state) do
-    {:ok, busy} = GPIO.read(state.busy_pid)
+    busy = GPIO.read(state.busy_pid)
 
     case busy do
       0 ->
@@ -134,6 +137,7 @@ defmodule Inky do
     packed_height = [:binary.encode_unsigned(Enum.fetch!(state.resolution_data, 1), :little)]
 
     # Skipped map ord thing for packed_height..
+    IO.puts("Starting to send shit..")
 
     # Set analog block control
     send_command(state, 0x74, 0x54)
@@ -173,8 +177,7 @@ defmodule Inky do
 
     # 0x24 == RAM B/W, 0x26 == RAM Red/Yellow/etc
     for data <- [{0x24, buffer_a}, {0x26, buffer_b}] do
-      cmd = data[0]
-      buffer = data[0]
+      {cmd, buffer} = data
 
       # Set RAM X Pointer start
       send_command(state, 0x4E, 0x00)
@@ -193,10 +196,10 @@ defmodule Inky do
     send_command(state, 0x10, 0x01)
   end
 
-  defp pixels_to_bytestring(state = %State{}, color_value) do
+  def pixels_to_bytestring(state = %State{}, color_value) do
     for i <-
-          Enum.flat_map(0..state.height, fn y ->
-            Enum.map(0..state.width, fn x ->
+          Enum.flat_map(0..(state.height - 1), fn y ->
+            Enum.map(0..(state.width - 1), fn x ->
               case state.pixels[{x, y}] do
                 ^color_value -> 1
                 _ -> 0
@@ -211,27 +214,51 @@ defmodule Inky do
     send_command(state, 0x12)
   end
 
+  defp send_command(state = %State{}, command) when is_binary(command) do
+    IO.inspect("send_command/2 binary")
+    spi_write(state, @spi_command, command)
+  end
+
   defp send_command(state = %State{}, command) do
+    IO.inspect("send_command/2")
     spi_write(state, @spi_command, <<command>>)
   end
 
   defp send_command(state = %State{}, command, data) do
-    send_command(state.spi_pid, <<command>>)
+    IO.inspect("send_command/3")
+    send_command(state, <<command>>)
     send_data(state, data)
   end
 
   defp send_data(state = %State{}, data) when is_integer(data) do
+    IO.inspect("send_data/2 int")
     spi_write(state, @spi_data, <<data>>)
   end
 
   defp send_data(state = %State{}, data) do
+    IO.inspect("send_command/2")
     spi_write(state, @spi_data, data)
   end
 
   defp spi_write(state = %State{}, data_or_command, values) do
+    IO.inspect("spi_write/3")
     GPIO.write(state.dc_pid, data_or_command)
     SPI.transfer(state.spi_pid, values)
     state
+  end
+
+  def try_get_state() do
+    state = Inky.setup(nil, :phat)
+
+    Enum.reduce(0..(state.height - 1), state, fn y, state ->
+      Enum.reduce(0..(state.width - 1), state, fn x, state ->
+        Inky.set_pixel(state, x, y, state.red)
+      end)
+    end)
+  end
+
+  def try(state) do
+    Inky.show(state)
   end
 
   defp get_luts(:black) do

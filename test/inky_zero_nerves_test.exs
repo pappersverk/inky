@@ -22,7 +22,18 @@ defmodule InkyZeroNervesTest do
   test "pixels to bytestring" do
     state = InkyPhat.update_state(%State{})
 
-    for y <- 0..state.height,
-        do: for(x <- 0..state.width, do: ^state = Inky.set_pixel(x, y, state.red))
+    state =
+      Enum.reduce(0..(state.height - 1), state, fn y, state ->
+        Enum.reduce(0..(state.width - 1), state, fn x, state ->
+          Inky.set_pixel(state, x, y, state.red)
+        end)
+      end)
+
+    assert map_size(state.pixels) == state.width * state.height
+    # IO.puts("state:")
+    # IO.inspect(state)
+
+    bytestring = Inky.pixels_to_bytestring(state, state.red)
+    assert byte_size(bytestring) == state.width * state.height / 8
   end
 end
