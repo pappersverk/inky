@@ -28,7 +28,7 @@ defmodule Inky do
   # @sclk_pin 11
   @cs0_pin 0
 
-  # @spi_chunk_size 4096
+  @spi_chunk_size 4096
   @spi_command 0
   @spi_data 1
 
@@ -81,6 +81,7 @@ defmodule Inky do
       end
 
     soft_reset(state)
+    busy_wait(state)
     state
   end
 
@@ -193,6 +194,7 @@ defmodule Inky do
 
     :timer.sleep(50)
     busy_wait(state)
+    # Enter deep sleep
     send_command(state, 0x10, 0x01)
   end
 
@@ -243,6 +245,7 @@ defmodule Inky do
   defp spi_write(state = %State{}, data_or_command, values) do
     IO.inspect("spi_write/3")
     GPIO.write(state.dc_pid, data_or_command)
+
     SPI.transfer(state.spi_pid, values)
     state
   end
