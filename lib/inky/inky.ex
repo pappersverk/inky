@@ -8,8 +8,10 @@ defmodule Inky do
 
   ## Examples
 
-      iex> Inky.hello()
-      :world
+      iex> alias Inky
+      iex> state = Inky.setup(nil, :phat)
+      iex> state = Enum.reduce(0..(state.height - 1), state, fn y, state ->Enum.reduce(0..(state.width - 1), state, fn x, state ->Inky.set_pixel(state, x, y, state.red)end)end)
+      iex> Inky.show(state)
 
   """
 
@@ -141,39 +143,52 @@ defmodule Inky do
     IO.puts("Starting to send shit..")
 
     # Set analog block control
+    IO.inspect("# Set analog block control")
     send_command(state, 0x74, 0x54)
     # Set digital block control
+    IO.inspect("# Set digital block control")
     send_command(state, 0x7E, 0x3B)
 
     # Gate setting
+    IO.inspect("# Gate setting")
     send_command(state, 0x01, :binary.list_to_bin(packed_height ++ [0x00]))
 
     # Gate driving voltage
+    IO.inspect("# Gate driving voltage")
     send_command(state, 0x03, [0b10000, 0b0001])
 
     # Dummy line period
+    IO.inspect("# Dummy line period")
     send_command(state, 0x3A, 0x07)
     # Gate line width
+    IO.inspect("# Gate line width")
     send_command(state, 0x3B, 0x04)
     # Data entry mode setting 0x03 = X/Y increment
+    IO.inspect("# Data entry mode setting 0x03 = X/Y increment")
     send_command(state, 0x11, 0x03)
 
     # Power on
+    IO.inspect("# Power on")
     send_command(state, 0x04)
     # VCOM Register, 0x3c = -1.5v?
+    IO.inspect("# VCOM Register, 0x3c = -1.5v?")
     send_command(state, 0x2C, 0x3C)
 
     send_command(state, 0x3C, 0x00)
 
     # Always black border
+    IO.inspect("# Always black border")
     send_command(state, 0x3C, 0x00)
 
     # Set LUTs
+    IO.inspect("# Set LUTs")
     send_command(state, 0x32, get_luts(:red))
 
     # Set RAM X Start/End
+    IO.inspect("# Set RAM X Start/End")
     send_command(state, 0x44, :binary.list_to_bin([0x00, trunc(state.columns / 8) - 1]))
     # Set RAM Y Start/End
+    IO.inspect("# Set RAM Y Start/End")
     send_command(state, 0x45, :binary.list_to_bin([0x00, 0x00] ++ packed_height))
 
     # 0x24 == RAM B/W, 0x26 == RAM Red/Yellow/etc
@@ -181,20 +196,26 @@ defmodule Inky do
       {cmd, buffer} = data
 
       # Set RAM X Pointer start
+      IO.inspect("# Set RAM X Pointer start")
       send_command(state, 0x4E, 0x00)
       # Set RAM Y Pointer start
+      IO.inspect("# Set RAM Y Pointer start")
       send_command(state, 0x4F, <<0x00, 0x00>>)
+      IO.inspect("# Buffer thing")
       send_command(state, cmd, buffer)
     end
 
     # Display Update Sequence
+    IO.inspect("# Display Update Sequence")
     send_command(state, 0x22, 0xC7)
     # Trigger Display Update
+    IO.inspect("# Trigger Display Update")
     send_command(state, 0x20)
 
     :timer.sleep(50)
     busy_wait(state)
     # Enter deep sleep
+    IO.inspect("# Enter deep sleep")
     send_command(state, 0x10, 0x01)
   end
 
@@ -242,11 +263,20 @@ defmodule Inky do
     spi_write(state, @spi_data, data)
   end
 
-  defp spi_write(state = %State{}, data_or_command, values) do
-    IO.inspect("spi_write/3")
+  defp spi_write(state = %State{}, data_or_command, values) when is_list(values) do
+    IO.inspect("spi_write/3 list")
     GPIO.write(state.dc_pid, data_or_command)
 
+    <<_::binary>> = SPI.transfer(state.spi_pid, :erlang.list_to_binary(values))
     SPI.transfer(state.spi_pid, values)
+    state
+  end
+
+  defp spi_write(state = %State{}, data_or_command, values) when is_binary(values) do
+    IO.inspect("spi_write/3 binary")
+    GPIO.write(state.dc_pid, data_or_command)
+
+    <<_::binary>> = SPI.transfer(state.spi_pid, values)
     state
   end
 
