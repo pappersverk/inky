@@ -275,8 +275,8 @@ defmodule Inky do
     IO.inspect("spi_write/3 list")
     GPIO.write(state.dc_pid, data_or_command)
 
-    SPI.transfer(state.spi_pid, values)
     {:ok, <<_::binary>>} = SPI.transfer(state.spi_pid, :erlang.list_to_binary(values))
+    SPI.transfer(state.spi_pid, :erlang.list_to_binary(values))
     state
   end
 
