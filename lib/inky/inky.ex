@@ -15,8 +15,8 @@ defmodule Inky do
 
   """
 
-  alias ElixirALE.SPI
-  alias ElixirALE.GPIO
+  alias Circuits.SPI
+  alias Circuits.GPIO
   alias Inky.InkyPhat
   alias Inky.InkyWhat
   alias Inky.State
@@ -55,11 +55,11 @@ defmodule Inky do
           state
 
         nil ->
-          {:ok, dc_pid} = GPIO.start_link(@dc_pin, :output, start_value: 0)
-          {:ok, reset_pid} = GPIO.start_link(@reset_pin, :output, start_value: 1)
-          {:ok, busy_pid} = GPIO.start_link(@busy_pin, :input)
+          {:ok, dc_pid} = GPIO.open(@dc_pin, :output)
+          {:ok, reset_pid} = GPIO.open(@reset_pin, :output)
+          {:ok, busy_pid} = GPIO.open(@busy_pin, :input)
           # GPIO.write(gpio_pid, 1)
-          {:ok, spi_pid} = SPI.start_link("spidev0." <> to_string(@cs0_pin), speed_hz: 488_000)
+          {:ok, spi_pid} = SPI.open("spidev0." <> to_string(@cs0_pin), speed_hz: 488_000)
           # Use binary pattern matching to pull out the ADC counts (low 10 bits)
           # <<_::size(6), counts::size(10)>> = SPI.transfer(spi_pid, <<0x78, 0x00>>)
           %State{
@@ -267,8 +267,8 @@ defmodule Inky do
     IO.inspect("spi_write/3 list")
     GPIO.write(state.dc_pid, data_or_command)
 
-    <<_::binary>> = SPI.transfer(state.spi_pid, :erlang.list_to_binary(values))
     SPI.transfer(state.spi_pid, values)
+    {:ok, <<_::binary>>} = SPI.transfer(state.spi_pid, :erlang.list_to_binary(values))
     state
   end
 
@@ -276,7 +276,7 @@ defmodule Inky do
     IO.inspect("spi_write/3 binary")
     GPIO.write(state.dc_pid, data_or_command)
 
-    <<_::binary>> = SPI.transfer(state.spi_pid, values)
+    {:ok, <<_::binary>>} = SPI.transfer(state.spi_pid, values)
     state
   end
 

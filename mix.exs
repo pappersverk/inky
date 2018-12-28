@@ -42,7 +42,8 @@ defmodule InkyZeroNerves.MixProject do
       {:shoehorn, "~> 0.4"},
       {:ring_logger, "~> 0.6"},
       {:toolshed, "~> 0.2"},
-      {:elixir_ale, "~> 1.2"}
+			{:circuits_spi, "~> 0.1"},
+			{:circuits_gpio, git: "https://github.com/elixir-circuits/circuits_gpio.git"}
     ] ++ deps(@target)
   end
 
