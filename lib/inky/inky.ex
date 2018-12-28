@@ -183,9 +183,12 @@ defmodule Inky do
     IO.inspect("# Always black border")
     send_command(state, 0x3C, 0x00)
 
+		# Set voltage of VSH and VSL on Yellow pHAT
+		send_command(state, 0x04, 0x07)
+
     # Set LUTs
     IO.inspect("# Set LUTs")
-    send_command(state, 0x32, get_luts(:red))
+    send_command(state, 0x32, get_luts(:yellow))
 
     # Set RAM X Start/End
     IO.inspect("# Set RAM X Start/End")
