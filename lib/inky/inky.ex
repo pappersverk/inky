@@ -105,8 +105,8 @@ defmodule Inky do
     # Not implemented: horizontal flip
     # Not implemented: rotation
 
-    black_bytes = pixels_to_bytestring(state, state.black)
-    red_bytes = pixels_to_bytestring(state, state.red)
+    black_bytes = pixels_to_bytestring(state, state.black, 1, 0)
+    red_bytes = pixels_to_bytestring(state, state.red, 0, 1)
     update(state, black_bytes, red_bytes)
   end
 
@@ -184,7 +184,7 @@ defmodule Inky do
     IO.inspect("# Always black border")
     send_command(state, 0x3C, 0x00)
 
-    # Set voltage of VSH and VSL on Yellow pHAT
+    # Set voltage of VSH and VSL on Yellow device
     if state.color == :yellow do
       send_command(state, 0x04, 0x07)
     end
@@ -233,13 +233,13 @@ defmodule Inky do
     send_command(state, 0x10, 0x01)
   end
 
-  def pixels_to_bytestring(state = %State{}, color_value) do
+  def pixels_to_bytestring(state = %State{}, color_value, match, no_match) do
     for i <-
           Enum.flat_map(0..(state.height - 1), fn y ->
             Enum.map(0..(state.width - 1), fn x ->
               case state.pixels[{x, y}] do
-                ^color_value -> 1
-                _ -> 0
+                ^color_value -> match
+                _ -> no_match
               end
             end)
           end),
@@ -483,6 +483,12 @@ defmodule Inky do
       2,
       2,
       # 5
+      0,
+      0,
+      0,
+      0,
+      0,
+      # 6
       0,
       0,
       0,
