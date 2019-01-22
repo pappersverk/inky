@@ -9,7 +9,7 @@ defmodule Inky do
   ## Examples
 
       iex> alias Inky
-      iex> state = Inky.setup(nil, :phat)
+      iex> state = Inky.setup(nil, :phat, :red)
       iex> state = Enum.reduce(0..(state.height - 1), state, fn y, state ->Enum.reduce(0..(state.width - 1), state, fn x, state ->Inky.set_pixel(state, x, y, state.red)end)end)
       iex> Inky.show(state)
 
@@ -48,7 +48,8 @@ defmodule Inky do
   # * `speed_hz`: bus speed (1000000)
   # * `delay_us`: delay between transaction (10)
 
-  def setup(state \\ nil, type) when type in [:phat, :what] do
+  def setup(state \\ nil, type, luts_color)
+      when type in [:phat, :what] and luts_color in [:black, :red, :yellow] do
     state =
       case state do
         %State{} ->
@@ -67,7 +68,7 @@ defmodule Inky do
             reset_pid: reset_pid,
             busy_pid: busy_pid,
             spi_pid: spi_pid,
-            color: :black
+            color: luts_color
           }
       end
 
@@ -132,7 +133,7 @@ defmodule Inky do
   end
 
   defp update(state, buffer_a, buffer_b) do
-    setup(state, state.type)
+    setup(state, state.type, state.color)
 
     ## Straight ported from python library, I know very little what I'm doing here
 
@@ -166,7 +167,7 @@ defmodule Inky do
     IO.inspect("# Gate line width")
     send_command(state, 0x3B, 0x04)
 
-		# Data entry mode setting 0x03 = X/Y increment
+    # Data entry mode setting 0x03 = X/Y increment
     IO.inspect("# Data entry mode setting 0x03 = X/Y increment")
     send_command(state, 0x11, 0x03)
 
@@ -183,12 +184,14 @@ defmodule Inky do
     IO.inspect("# Always black border")
     send_command(state, 0x3C, 0x00)
 
-		# Set voltage of VSH and VSL on Yellow pHAT
-		send_command(state, 0x04, 0x07)
+    # Set voltage of VSH and VSL on Yellow pHAT
+    if state.color == :yellow do
+      send_command(state, 0x04, 0x07)
+    end
 
     # Set LUTs
     IO.inspect("# Set LUTs")
-    send_command(state, 0x32, get_luts(:yellow))
+    send_command(state, 0x32, get_luts(state.color))
 
     # Set RAM X Start/End
     IO.inspect("# Set RAM X Start/End")
@@ -221,11 +224,11 @@ defmodule Inky do
     IO.inspect("# Trigger Display Update")
     send_command(state, 0x20)
 
-		# Wait Before Deep Sleep
-		:timer.sleep(50)
+    # Wait Before Deep Sleep
+    :timer.sleep(50)
     busy_wait(state)
 
-		# Enter Deep Sleep
+    # Enter Deep Sleep
     IO.inspect("# Enter deep sleep")
     send_command(state, 0x10, 0x01)
   end
@@ -276,23 +279,28 @@ defmodule Inky do
 
   defp spi_write(state = %State{}, data_or_command, values) when is_list(values) do
     IO.inspect("spi_write/3 list")
+    IO.puts("spi_write/3 GPIO...")
     GPIO.write(state.dc_pid, data_or_command)
-
+    IO.puts("[done]")
+    IO.puts("spi_write/3 SPI transfer")
     {:ok, <<_::binary>>} = SPI.transfer(state.spi_pid, :erlang.list_to_binary(values))
-    SPI.transfer(state.spi_pid, :erlang.list_to_binary(values))
+    IO.puts("[done]")
     state
   end
 
   defp spi_write(state = %State{}, data_or_command, values) when is_binary(values) do
     IO.inspect("spi_write/3 binary")
+    IO.puts("spi_write/3 GPIO...")
     GPIO.write(state.dc_pid, data_or_command)
-
+    IO.puts("[done]")
+    IO.puts("spi_write/3 SPI transfer")
     {:ok, <<_::binary>>} = SPI.transfer(state.spi_pid, values)
+    IO.puts("[done]")
     state
   end
 
   def try_get_state() do
-    state = Inky.setup(nil, :phat)
+    state = Inky.setup(nil, :phat, :red)
 
     Enum.reduce(0..(state.height - 1), state, fn y, state ->
       Enum.reduce(0..(state.width - 1), state, fn x, state ->
