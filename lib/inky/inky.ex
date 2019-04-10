@@ -105,8 +105,8 @@ defmodule Inky do
     # Not implemented: horizontal flip
     # Not implemented: rotation
 
-    black_bytes = pixels_to_bytestring(state, state.black, 1, 0)
-    red_bytes = pixels_to_bytestring(state, state.red, 0, 1)
+    black_bytes = pixels_to_bytestring(state, state.black, 0, 1)
+    red_bytes = pixels_to_bytestring(state, state.red, 1, 0)
     update(state, black_bytes, red_bytes)
   end
 
@@ -141,47 +141,47 @@ defmodule Inky do
     packed_height = [:binary.encode_unsigned(Enum.fetch!(state.resolution_data, 1), :little)]
 
     # Skipped map ord thing for packed_height..
-    IO.puts("Starting to send shit..")
+    # IO.puts("Starting to send shit..")
 
     # Set analog block control
-    IO.inspect("# Set analog block control")
+    # IO.inspect("# Set analog block control")
     send_command(state, 0x74, 0x54)
 
     # Set digital block control
-    IO.inspect("# Set digital block control")
+    # IO.inspect("# Set digital block control")
     send_command(state, 0x7E, 0x3B)
 
     # Gate setting
-    IO.inspect("# Gate setting")
+    # IO.inspect("# Gate setting")
     send_command(state, 0x01, :binary.list_to_bin(packed_height ++ [0x00]))
 
     # Gate driving voltage
-    IO.inspect("# Gate driving voltage")
+    # IO.inspect("# Gate driving voltage")
     send_command(state, 0x03, [0b10000, 0b0001])
 
     # Dummy line period
-    IO.inspect("# Dummy line period")
+    # IO.inspect("# Dummy line period")
     send_command(state, 0x3A, 0x07)
 
     # Gate line width
-    IO.inspect("# Gate line width")
+    # IO.inspect("# Gate line width")
     send_command(state, 0x3B, 0x04)
 
     # Data entry mode setting 0x03 = X/Y increment
-    IO.inspect("# Data entry mode setting 0x03 = X/Y increment")
+    # IO.inspect("# Data entry mode setting 0x03 = X/Y increment")
     send_command(state, 0x11, 0x03)
 
     # Power on
-    IO.inspect("# Power on")
+    # IO.inspect("# Power on")
     send_command(state, 0x04)
 
     # VCOM Register, 0x3c = -1.5v?
-    IO.inspect("# VCOM Register, 0x3c = -1.5v?")
+    # IO.inspect("# VCOM Register, 0x3c = -1.5v?")
     send_command(state, 0x2C, 0x3C)
     send_command(state, 0x3C, 0x00)
 
     # Always black border
-    IO.inspect("# Always black border")
+    # IO.inspect("# Always black border")
     send_command(state, 0x3C, 0x00)
 
     # Set voltage of VSH and VSL on Yellow device
@@ -190,15 +190,15 @@ defmodule Inky do
     end
 
     # Set LUTs
-    IO.inspect("# Set LUTs")
+    # IO.inspect("# Set LUTs")
     send_command(state, 0x32, get_luts(state.color))
 
     # Set RAM X Start/End
-    IO.inspect("# Set RAM X Start/End")
+    # IO.inspect("# Set RAM X Start/End")
     send_command(state, 0x44, :binary.list_to_bin([0x00, trunc(state.columns / 8) - 1]))
 
     # Set RAM Y Start/End
-    IO.inspect("# Set RAM Y Start/End")
+    # IO.inspect("# Set RAM Y Start/End")
     send_command(state, 0x45, :binary.list_to_bin([0x00, 0x00] ++ packed_height))
 
     # 0x24 == RAM B/W, 0x26 == RAM Red/Yellow/etc
@@ -206,22 +206,22 @@ defmodule Inky do
       {cmd, buffer} = data
 
       # Set RAM X Pointer start
-      IO.inspect("# Set RAM X Pointer start")
+      # IO.inspect("# Set RAM X Pointer start")
       send_command(state, 0x4E, 0x00)
 
       # Set RAM Y Pointer start
-      IO.inspect("# Set RAM Y Pointer start")
+      # IO.inspect("# Set RAM Y Pointer start")
       send_command(state, 0x4F, <<0x00, 0x00>>)
-      IO.inspect("# Buffer thing")
+      # IO.inspect("# Buffer thing")
       send_command(state, cmd, buffer)
     end
 
     # Display Update Sequence
-    IO.inspect("# Display Update Sequence")
+    # IO.inspect("# Display Update Sequence")
     send_command(state, 0x22, 0xC7)
 
     # Trigger Display Update
-    IO.inspect("# Trigger Display Update")
+    # IO.inspect("# Trigger Display Update")
     send_command(state, 0x20)
 
     # Wait Before Deep Sleep
@@ -229,7 +229,7 @@ defmodule Inky do
     busy_wait(state)
 
     # Enter Deep Sleep
-    IO.inspect("# Enter deep sleep")
+    # IO.inspect("# Enter deep sleep")
     send_command(state, 0x10, 0x01)
   end
 
@@ -252,50 +252,50 @@ defmodule Inky do
   end
 
   defp send_command(state = %State{}, command) when is_binary(command) do
-    IO.inspect("send_command/2 binary")
+    # IO.inspect("send_command/2 binary")
     spi_write(state, @spi_command, command)
   end
 
   defp send_command(state = %State{}, command) do
-    IO.inspect("send_command/2")
+    # IO.inspect("send_command/2")
     spi_write(state, @spi_command, <<command>>)
   end
 
   defp send_command(state = %State{}, command, data) do
-    IO.inspect("send_command/3")
+    # IO.inspect("send_command/3")
     send_command(state, <<command>>)
     send_data(state, data)
   end
 
   defp send_data(state = %State{}, data) when is_integer(data) do
-    IO.inspect("send_data/2 int")
+    # IO.inspect("send_data/2 int")
     spi_write(state, @spi_data, <<data>>)
   end
 
   defp send_data(state = %State{}, data) do
-    IO.inspect("send_command/2")
+    # IO.inspect("send_command/2")
     spi_write(state, @spi_data, data)
   end
 
   defp spi_write(state = %State{}, data_or_command, values) when is_list(values) do
-    IO.inspect("spi_write/3 list")
-    IO.puts("spi_write/3 GPIO...")
+    # IO.inspect("spi_write/3 list")
+    # IO.puts("spi_write/3 GPIO...")
     GPIO.write(state.dc_pid, data_or_command)
-    IO.puts("[done]")
-    IO.puts("spi_write/3 SPI transfer")
+    # IO.puts("[done]")
+    # IO.puts("spi_write/3 SPI transfer")
     {:ok, <<_::binary>>} = SPI.transfer(state.spi_pid, :erlang.list_to_binary(values))
-    IO.puts("[done]")
+    # IO.puts("[done]")
     state
   end
 
   defp spi_write(state = %State{}, data_or_command, values) when is_binary(values) do
-    IO.inspect("spi_write/3 binary")
-    IO.puts("spi_write/3 GPIO...")
+    # IO.inspect("spi_write/3 binary")
+    # IO.puts("spi_write/3 GPIO...")
     GPIO.write(state.dc_pid, data_or_command)
-    IO.puts("[done]")
-    IO.puts("spi_write/3 SPI transfer")
+    # IO.puts("[done]")
+    # IO.puts("spi_write/3 SPI transfer")
     {:ok, <<_::binary>>} = SPI.transfer(state.spi_pid, values)
-    IO.puts("[done]")
+    # IO.puts("[done]")
     state
   end
 
