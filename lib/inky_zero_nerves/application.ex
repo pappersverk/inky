@@ -3,7 +3,7 @@ defmodule InkyZeroNerves.Application do
   # for more information on OTP Applications
   @moduledoc false
 
-  @target Mix.Project.config()[:target]
+  @target Mix.target()
 
   use Application
 
@@ -15,7 +15,7 @@ defmodule InkyZeroNerves.Application do
   end
 
   # List all child processes to be supervised
-  def children("host") do
+  def children(:host) do
     [
       # Starts a worker by calling: InkyZeroNerves.Worker.start_link(arg)
       # {InkyZeroNerves.Worker, arg},

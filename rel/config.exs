@@ -27,6 +27,7 @@ end
 
 release :inky_zero_nerves do
   set(version: current_version(:inky_zero_nerves))
+  set(strip_debug_info: true)
   plugin(Nerves)
   plugin(Shoehorn)
 end
