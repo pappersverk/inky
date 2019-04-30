@@ -110,6 +110,27 @@ defmodule Inky do
     update(state, black_bytes, red_bytes)
   end
 
+  def log_grid(state = %State{}) do
+    grid =
+      Enum.reduce(0..(state.height - 1), "", fn y, grid ->
+        row =
+          Enum.reduce(0..(state.width - 1), "", fn x, row ->
+            color_value = Map.get(state.pixels, {x, y}, 0)
+
+            row <>
+              case color_value do
+                0 -> "W"
+                1 -> "B"
+                2 -> "R"
+              end
+          end)
+
+        grid <> row <> "\n"
+      end)
+
+    IO.puts(grid)
+  end
+
   # Private functionality
 
   defp busy_wait(state) do
