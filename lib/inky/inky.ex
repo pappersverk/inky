@@ -103,7 +103,8 @@ defmodule Inky do
   def show(state = %State{}) do
     # Not implemented: vertical flip
     # Not implemented: horizontal flip
-    # Not implemented: rotation
+
+    # Note: Rotation handled when converting to bytestring
 
     black_bytes = pixels_to_bytestring(state, state.black, 0, 1)
     red_bytes = pixels_to_bytestring(state, state.red, 1, 0)
@@ -159,7 +160,10 @@ defmodule Inky do
     ## Straight ported from python library, I know very little what I'm doing here
 
     # little endian, unsigned short
-    packed_height = [:binary.encode_unsigned(Enum.fetch!(state.resolution_data, 1), :little)]
+    packed_height = [
+      :binary.encode_unsigned(Enum.fetch!(state.resolution_data, 1), :little),
+      <<0x00>>
+    ]
 
     # Skipped map ord thing for packed_height..
     # IO.puts("Starting to send shit..")
@@ -255,10 +259,26 @@ defmodule Inky do
   end
 
   def pixels_to_bytestring(state = %State{}, color_value, match, no_match) do
+    rotation = state.rotation / 90
+
+    {order, outer_from, outer_to, inner_from, inner_to} =
+      case rotation do
+        -1.0 -> {:x_outer, state.width - 1, 0, 0, state.height - 1}
+        1.0 -> {:x_outer, 0, state.width - 1, state.height - 1, 0}
+        -2.0 -> {:y_outer, state.width - 1, 0, state.height - 1, 0}
+        _ -> {:y_outer, 0, state.height - 1, 0, state.width - 1}
+      end
+
     for i <-
-          Enum.flat_map(0..(state.height - 1), fn y ->
-            Enum.map(0..(state.width - 1), fn x ->
-              case state.pixels[{x, y}] do
+          Enum.flat_map(outer_from..outer_to, fn i ->
+            Enum.map(inner_from..inner_to, fn j ->
+              key =
+                case order do
+                  :x_outer -> {i, j}
+                  :y_outer -> {j, i}
+                end
+
+              case state.pixels[key] do
                 ^color_value -> match
                 _ -> no_match
               end
