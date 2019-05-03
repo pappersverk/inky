@@ -1,6 +1,8 @@
 # InkyZeroNerves
 
-**TODO: Add description**
+This is a very early-days library that is capable of setting pixels and updating the Inky PHAT or WHAT displays. It is a port of the python library at https://github.com/pimoroni/inky
+
+Check out testrun.exs for some simple examples.
 
 ## Targets
 
