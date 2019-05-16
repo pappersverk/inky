@@ -16,6 +16,7 @@ defmodule Inky.State do
     red: nil,
     yellow: nil,
     resolution_data: nil,
+    packed_height: nil,
     pixels: %{}
   )
 end
