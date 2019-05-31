@@ -52,20 +52,21 @@ defmodule Inky do
   # * `speed_hz`: bus speed (1000000)
   # * `delay_us`: delay between transaction (10)
 
-  def setup(state \\ nil, type, luts_color)
-      when type in [:phat, :what] and luts_color in [:black, :red, :yellow] do
-    state
-    |> init_state(luts_color)
-    |> init_reset
+  def init(type, color)
+      when type in [:phat, :what] and color in [:black, :red, :yellow] do
+    color
+    |> init_state()
+    |> init_reset()
     |> init_type(type)
-    |> setup_derived_values
-    |> soft_reset
-    |> busy_wait
+    |> setup_derived_values()
+    |> soft_reset()
+    |> busy_wait()
   end
 
   def set_pixel(state = %State{}, x, y, value) do
     if value in [state.white, state.black, state.red, state.yellow] do
-      put_in(state.pixels[{x, y}], value)
+      pixels = put_in(state.pixels, [{x, y}], value)
+      %State{state | pixels: pixels}
     else
       state
     end
@@ -104,13 +105,9 @@ defmodule Inky do
     state
   end
 
-  defp init_state(state = %State{}, _) do
-    state
-  end
-
-  defp init_state(nil, luts_color) do
+  defp init_state(luts_color) do
     %State{}
-    |> init_pins
+    |> init_pins()
     |> Map.put(:color, luts_color)
   end
 
@@ -152,7 +149,6 @@ defmodule Inky do
 
   defp update(state, buffer_a, buffer_b) do
     state
-    |> setup(state.type, state.color)
     |> set_analog_block_control
     |> set_digital_block_control
     |> set_gate
@@ -256,7 +252,7 @@ defmodule Inky do
   end
 
   def try_get_state() do
-    state = Inky.setup(nil, :phat, :red)
+    state = Inky.init(:phat, :red)
 
     Enum.reduce(0..(state.height - 1), state, fn y, state ->
       Enum.reduce(0..(state.width - 1), state, fn x, state ->

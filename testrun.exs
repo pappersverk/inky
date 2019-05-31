@@ -1,4 +1,4 @@
-state = Inky.setup(nil, :phat, :red)
+state = Inky.init(:phat, :red)
 
 state =
   Enum.reduce(0..(state.height - 1), state, fn y, state ->
@@ -9,7 +9,7 @@ state =
 
 Inky.show(state)
 
-state = Inky.setup(nil, :phat, :red)
+state = Inky.init(:phat, :red)
 
 state =
   Enum.reduce(0..(state.height - 1), state, fn y, state ->
