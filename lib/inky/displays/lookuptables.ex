@@ -1,4 +1,9 @@
-defmodule Inky.LookupTables do
+defmodule Inky.Displays.LookupTables do
+  @type variant :: :phat | :what
+  @type accent :: :black | :red | :yellow
+  @type color :: :white | accent()
+
+  @spec get_luts(accent()) :: <<_::560>>
   def get_luts(:black) do
     <<
       # Phase 0     Phase 1     Phase 2     Phase 3     Phase 4     Phase 5     Phase 6
