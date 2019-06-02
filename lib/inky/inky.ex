@@ -15,6 +15,8 @@ defmodule Inky do
 
   """
 
+  require Integer
+
   alias Inky.Commands
   alias Inky.Displays.Display
   alias Inky.InkyIO
@@ -43,7 +45,7 @@ defmodule Inky do
 
     %State{display: display, pins: pins}
     |> do_reset()
-    |> do_compute_packed_height(display.height)
+    |> do_compute_packed_height()
     |> do_soft_reset()
     |> do_await_device()
   end
@@ -85,9 +87,23 @@ defmodule Inky do
     Display.spec_for(type, accent)
   end
 
-  defp do_compute_packed_height(state, height) do
+  defp do_compute_packed_height(state) do
+    display = state.display
+
+    aspect_ratio_changed =
+      (display.rotation / 90)
+      |> Kernel.trunc()
+      |> Integer.is_odd()
+
+    actual_height =
+      if aspect_ratio_changed do
+        display.width
+      else
+        display.height
+      end
+
     # Little endian, unsigned short
-    packed_height = [:binary.encode_unsigned(height, :little), <<0x00>>]
+    packed_height = [:binary.encode_unsigned(actual_height, :little), <<0x00>>]
     %State{state | packed_height: packed_height}
   end
 
