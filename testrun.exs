@@ -1,9 +1,13 @@
 state = Inky.init(:phat, :red)
 
 state =
-  Enum.reduce(0..(state.height - 1), state, fn y, state ->
-    Enum.reduce(0..(state.width - 1), state, fn x, state ->
-      Inky.set_pixel(state, x, y, state.white)
+  Enum.reduce(0..(state.display.height - 1), state, fn y, state ->
+    Enum.reduce(0..(state.display.width - 1), state, fn x, state ->
+      color = cond do
+        rem(x, 2) == 0 -> :white
+        true -> :black
+      end
+      Inky.set_pixel(state, x, y, color)
     end)
   end)
 

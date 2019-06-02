@@ -62,10 +62,13 @@ defmodule Inky.Commands do
   defp do_pixels_to_bitstring(pixels, p2b, opts) do
     for i <- opts.i_1..opts.i_n,
         j <- opts.j_1..opts.j_n,
-        key <- pixel_key(opts.order, i, j),
-        pixel_val <- p2b.(pixels[key]),
-        do: <<pixel_val::size(1)>>,
+        do: <<pixel_value(pixels, p2b, opts.order, i, j)::size(1)>>,
         into: <<>>
+  end
+
+  defp pixel_value(pixels, p2b, order, i, j) do
+    key = pixel_key(order, i, j)
+    p2b.(pixels[key])
   end
 
   defp pixel_key(:x_outer, i, j), do: {i, j}

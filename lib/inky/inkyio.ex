@@ -2,6 +2,12 @@ defmodule Inky.InkyIO do
   alias Circuits.SPI
   alias Circuits.GPIO
 
+  # SPI bus options include:
+  # * `mode`: This specifies the clock polarity and phase to use. (0)
+  # * `bits_per_word`: bits per word on the bus (8)
+  # * `speed_hz`: bus speed (1000000)
+  # * `delay_us`: delay between transaction (10)
+
   @reset_pin 27
   @busy_pin 17
   @dc_pin 22
