@@ -54,7 +54,7 @@ defmodule Inky.Commands do
     case rotation do
       -1.0 -> %{order: :x_outer, i_1: width - 1, i_n: 0, j_1: 0, j_n: height - 1}
       1.0 -> %{order: :x_outer, i_1: 0, i_n: width - 1, j_1: height - 1, j_n: 0}
-      -2.0 -> %{order: :y_outer, i_1: width - 1, i_n: 0, j_1: height - 1, j_n: 0}
+      -2.0 -> %{order: :y_outer, i_1: height - 1, i_n: 0, j_1: width - 1, j_n: 0}
       _ -> %{order: :y_outer, i_1: 0, i_n: height - 1, j_1: 0, j_n: width - 1}
     end
   end
