@@ -71,7 +71,7 @@ defmodule Inky.InkyIO do
   # SPI data
 
   defp send_data(pins, data) when is_integer(data) do
-    spi_write(pins, @spi_data, <<data>>)
+    spi_write(pins, @spi_data, <<data::unsigned-little-integer-16>>)
   end
 
   defp send_data(pins, data) do

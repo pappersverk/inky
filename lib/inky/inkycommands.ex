@@ -11,13 +11,11 @@ defmodule Inky.Commands do
     do_pixels_to_bitstring(pixels, p2b, opts)
   end
 
-  def update(pins, display, packed_height, buffer_black, buffer_accent) do
-    columns = get_columns(display)
-
+  def update(pins, display, buffer_black, buffer_accent) do
     pins
     |> set_analog_block_control()
     |> set_digital_block_control()
-    |> set_gate(packed_height)
+    |> set_gate(display)
     |> set_gate_driving_voltage()
     |> dummy_line_period()
     |> set_gate_line_width()
@@ -27,19 +25,14 @@ defmodule Inky.Commands do
     |> set_border_color()
     |> configure_if_yellow(display.accent)
     |> set_luts(display.luts)
-    |> set_dimensions(columns, packed_height)
+    |> set_dimensions(display)
     |> push_pixel_data(buffer_black, buffer_accent)
     |> display_update_sequence()
     |> trigger_display_update()
     |> wait_before_sleep()
     |> deep_sleep()
-  end
 
-  defp get_columns(display) do
-    case display.type do
-      :phat -> display.height
-      :what -> display.width
-    end
+    :ok
   end
 
   def soft_reset(pins) do
@@ -93,13 +86,12 @@ defmodule Inky.Commands do
     send_command(pins, 0x7E, 0x3B)
   end
 
-  defp set_gate(pins, packed_height) do
-    # TODO: tidy up binary creation
-    send_command(pins, 0x01, :binary.list_to_bin(packed_height ++ [0x00]))
+  defp set_gate(pins, display) do
+    data = <<display.packed_dimensions.height::unsigned-little-integer-16, 0>>
+    send_command(pins, 0x01, data)
   end
 
   defp set_gate_driving_voltage(pins) do
-    # TODO: tidy up binary creation
     send_command(pins, 0x03, [0b10000, 0b0001])
   end
 
@@ -144,14 +136,15 @@ defmodule Inky.Commands do
     send_command(pins, 0x32, luts)
   end
 
-  defp set_dimensions(pins, columns, packed_height) do
-    # TODO create binaries more neatly
+  defp set_dimensions(pins, display) do
+    width_data = display.packed_dimensions.width
+    height_data = <<0, 0, display.packed_dimensions.height::unsigned-little-integer-16>>
 
     pins
     # Set RAM X Start/End
-    |> send_command(0x44, :binary.list_to_bin([0x00, trunc(columns / 8) - 1]))
+    |> send_command(0x44, width_data)
     # Set RAM Y Start/End
-    |> send_command(0x45, :binary.list_to_bin([0x00, 0x00] ++ packed_height))
+    |> send_command(0x45, height_data)
   end
 
   defp push_pixel_data(pins, buffer_black, buffer_accent) do
