@@ -12,6 +12,8 @@ defmodule Inky.Commands do
   end
 
   def update(pins, display, packed_height, buffer_black, buffer_accent) do
+    columns = get_columns(display)
+
     pins
     |> set_analog_block_control()
     |> set_digital_block_control()
@@ -25,12 +27,19 @@ defmodule Inky.Commands do
     |> set_border_color()
     |> configure_if_yellow(display.accent)
     |> set_luts(display.luts)
-    |> set_dimensions(display.width, packed_height)
+    |> set_dimensions(columns, packed_height)
     |> push_pixel_data(buffer_black, buffer_accent)
     |> display_update_sequence()
     |> trigger_display_update()
     |> wait_before_sleep()
     |> deep_sleep()
+  end
+
+  defp get_columns(display) do
+    case display.type do
+      :phat -> display.height
+      :what -> display.width
+    end
   end
 
   def soft_reset(pins) do
@@ -135,11 +144,12 @@ defmodule Inky.Commands do
     send_command(pins, 0x32, luts)
   end
 
-  defp set_dimensions(pins, width, packed_height) do
+  defp set_dimensions(pins, columns, packed_height) do
     # TODO create binaries more neatly
+
     pins
     # Set RAM X Start/End
-    |> send_command(0x44, :binary.list_to_bin([0x00, trunc(width / 8) - 1]))
+    |> send_command(0x44, :binary.list_to_bin([0x00, trunc(columns / 8) - 1]))
     # Set RAM Y Start/End
     |> send_command(0x45, :binary.list_to_bin([0x00, 0x00] ++ packed_height))
   end

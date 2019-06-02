@@ -14,8 +14,8 @@ defmodule Inky.Displays.Display do
   def spec_for(:phat, accent) do
     %__MODULE__{
       type: :phat,
-      width: 104,
-      height: 212,
+      width: 212,
+      height: 104,
       rotation: -90,
       accent: accent,
       luts: LookupTables.get_luts(accent)

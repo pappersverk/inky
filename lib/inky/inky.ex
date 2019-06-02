@@ -88,23 +88,17 @@ defmodule Inky do
   end
 
   defp do_compute_packed_height(state) do
-    display = state.display
-
-    aspect_ratio_changed =
-      (display.rotation / 90)
-      |> Kernel.trunc()
-      |> Integer.is_odd()
-
-    actual_height =
-      if aspect_ratio_changed do
-        display.width
-      else
-        display.height
-      end
-
+    rows = get_rows(state.display)
     # Little endian, unsigned short
-    packed_height = [:binary.encode_unsigned(actual_height, :little), <<0x00>>]
+    packed_height = [:binary.encode_unsigned(rows, :little), <<0x00>>]
     %State{state | packed_height: packed_height}
+  end
+
+  defp get_rows(display) do
+    case display.type do
+      :phat -> display.width
+      :what -> display.height
+    end
   end
 
   defp do_reset(state) do

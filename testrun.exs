@@ -26,7 +26,7 @@ state =
             y > state.display.height / 2 -> :red
             true ->
               cond do
-                rem(x, 2) -> :white
+                rem(x, 2) == 0 -> :white
                 true -> :black
               end
           end
