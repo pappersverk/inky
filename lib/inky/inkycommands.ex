@@ -176,6 +176,7 @@ defmodule Inky.Commands do
   defp wait_before_sleep(pins) do
     :timer.sleep(50)
     await_device(pins)
+    pins
   end
 
   # pipe-able wrappers
