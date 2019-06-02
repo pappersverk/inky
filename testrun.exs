@@ -1,3 +1,4 @@
+# Striped
 state = Inky.init(:phat, :red)
 
 state =
@@ -12,6 +13,38 @@ state =
   end)
 
 Inky.show(state)
+
+# Quadrants (one striped)
+state = Inky.init(:phat, :red)
+
+state =
+  Enum.reduce(0..(state.display.height - 1), state, fn y, state ->
+    Enum.reduce(0..(state.display.width - 1), state, fn x, state ->
+      color = cond do
+        x > state.display.width / 2 ->
+          cond do
+            y > state.display.height / 2 -> :red
+            true ->
+              cond do
+                rem(x, 2) -> :white
+                true -> :black
+              end
+          end
+        true -> 
+          cond do
+            y > state.display.height / 2 ->
+              :black
+            true ->
+              :white
+          end
+      end
+      Inky.set_pixel(state, x, y, color)
+    end)
+  end)
+
+Inky.show(state)
+
+# Sections, colored
 
 state = Inky.init(:phat, :red)
 
