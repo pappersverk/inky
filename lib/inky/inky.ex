@@ -15,6 +15,8 @@ defmodule Inky do
 
   """
 
+  use GenServer
+
   require Integer
 
   alias Inky.Commands
@@ -43,19 +45,57 @@ defmodule Inky do
     display = init_state_display(type, accent)
     pins = InkyIO.init_pins()
 
-    %State{display: display, pins: pins}
-    |> do_reset()
-    |> do_compute_packed_height()
-    |> do_soft_reset()
-    |> do_await_device()
+    state =
+      %State{display: display, pins: pins}
+      |> do_reset()
+      |> do_compute_packed_height()
+      |> do_soft_reset()
+      |> do_await_device()
+
+    {:ok, state}
   end
 
-  def set_pixel(state = %State{}, x, y, value) when value in [:white, :black, :red, :yellow] do
+  # Handle a list of color atoms.
+  def handle_call({:set_pixels, pixels}, state) when is_list(pixels) do
+    new_pixels =
+      Enum.reduce(pixels, {{0, 0}, state}, fn color, {{x, y}, state} ->
+        # Ignore unknown colors, ignore drawing outside the size of the screen
+        {_, state} =
+          if color in [:white, :black, state.display.accent] and x < state.display.width and
+               y < state.display.height do
+            set_pixel(state, x, y, color)
+          end
+
+        x =
+          cond do
+            x >= state.display.width -> 0
+            true -> x + 1
+          end
+
+        # It is fine if the silly caller wants to overflow the drawable area
+        y = y + 1
+
+        {{x, y}, state}
+      end)
+
+    state = %{state | pixels: new_pixels}
+    show(state)
+    {:noreply, state}
+  end
+
+  # Handle a map of coordinate tuples (matches internal representation)
+  def handle_call({:set_pixels, pixels}, state) when is_map(pixels) do
+    state = %{state | pixels: pixels}
+    show(state)
+    {:noreply, state}
+  end
+
+  defp set_pixel(state = %State{}, x, y, value) when value in [:white, :black, :red, :yellow] do
     pixels = put_in(state.pixels, [{x, y}], value)
     %State{state | pixels: pixels}
   end
 
-  def show(state = %State{}) do
+  defp show(state = %State{}) do
     # Not implemented: vertical flip
     # Not implemented: horizontal flip
 
@@ -106,51 +146,13 @@ defmodule Inky do
     state
   end
 
-  def do_soft_reset(state) do
+  defp do_soft_reset(state) do
     Commands.soft_reset(state.pins)
     state
   end
 
-  def do_await_device(state) do
+  defp do_await_device(state) do
     Commands.await_device(state.pins)
     state
-  end
-
-  # MISC
-
-  def log_grid(state = %State{}) do
-    grid =
-      Enum.reduce(0..(state.height - 1), "", fn y, grid ->
-        row =
-          Enum.reduce(0..(state.width - 1), "", fn x, row ->
-            color_value = Map.get(state.pixels, {x, y}, 0)
-
-            row <>
-              case color_value do
-                0 -> "W"
-                1 -> "B"
-                2 -> "R"
-              end
-          end)
-
-        grid <> row <> "\n"
-      end)
-
-    IO.puts(grid)
-    state
-  end
-
-  def try_get_state() do
-    state = Inky.init(:phat, :red)
-
-    Enum.reduce(0..(state.height - 1), state, fn y, state ->
-      Enum.reduce(0..(state.width - 1), state, fn x, state ->
-        Inky.set_pixel(state, x, y, state.red)
-      end)
-    end)
-  end
-
-  def try(state) do
-    Inky.show(state)
   end
 end
