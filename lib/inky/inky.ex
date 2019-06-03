@@ -77,7 +77,7 @@ defmodule Inky do
         _ -> 0
       end)
 
-    Commands.update(pins, display, state.packed_height, black_bytes, accent_bytes)
+    Commands.update(pins, display, black_bytes, accent_bytes)
   end
 
   # init helpers
