@@ -21,18 +21,21 @@ defmodule Inky.PixelUtil do
   defp pixel_to_accent(_), do: 0
 
   defp bitstring_traversal_opts(rotation, width, height) do
+    w_n = width - 1
+    h_n = height - 1
+
     case rotation do
-      -1.0 -> %{order: :x_outer, i_1: width - 1, i_n: 0, j_1: 0, j_n: height - 1}
-      1.0 -> %{order: :x_outer, i_1: 0, i_n: width - 1, j_1: height - 1, j_n: 0}
-      -2.0 -> %{order: :y_outer, i_1: height - 1, i_n: 0, j_1: width - 1, j_n: 0}
-      _ -> %{order: :y_outer, i_1: 0, i_n: height - 1, j_1: 0, j_n: width - 1}
+      -1.0 -> {:x_outer, w_n, 0, 0, h_n}
+      1.0 -> {:x_outer, 0, w_n, h_n, 0}
+      -2.0 -> {:y_outer, h_n, 0, w_n, 0}
+      _ -> {:y_outer, 0, h_n, 0, w_n}
     end
   end
 
-  defp do_pixels_to_bitstring(pixels, p2b, opts) do
-    for i <- opts.i_1..opts.i_n,
-        j <- opts.j_1..opts.j_n,
-        do: <<pixel_value(pixels, p2b, opts.order, i, j)::size(1)>>,
+  defp do_pixels_to_bitstring(pixels, p2b, {order, i_1, i_n, j_1, j_n}) do
+    for i <- i_1..i_n,
+        j <- j_1..j_n,
+        do: <<pixel_value(pixels, p2b, order, i, j)::size(1)>>,
         into: <<>>
   end
 
