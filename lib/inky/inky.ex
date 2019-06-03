@@ -45,7 +45,6 @@ defmodule Inky do
 
     %State{display: display, pins: pins}
     |> do_reset()
-    |> do_compute_packed_height()
     |> do_soft_reset()
     |> do_await_device()
   end
@@ -85,20 +84,6 @@ defmodule Inky do
 
   defp init_state_display(type, accent) do
     Display.spec_for(type, accent)
-  end
-
-  defp do_compute_packed_height(state) do
-    rows = get_rows(state.display)
-    # Little endian, unsigned short
-    packed_height = [:binary.encode_unsigned(rows, :little), <<0x00>>]
-    %State{state | packed_height: packed_height}
-  end
-
-  defp get_rows(display) do
-    case display.type do
-      :phat -> display.width
-      :what -> display.height
-    end
   end
 
   defp do_reset(state) do
