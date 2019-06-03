@@ -12,10 +12,12 @@ defmodule Inky.Commands do
   end
 
   def update(pins, display, buffer_black, buffer_accent) do
+    d_pd = display.packed_dimensions
+
     pins
     |> set_analog_block_control()
     |> set_digital_block_control()
-    |> set_gate(display)
+    |> set_gate(d_pd.height)
     |> set_gate_driving_voltage()
     |> dummy_line_period()
     |> set_gate_line_width()
@@ -25,7 +27,7 @@ defmodule Inky.Commands do
     |> set_border_color()
     |> configure_if_yellow(display.accent)
     |> set_luts(display.luts)
-    |> set_dimensions(display)
+    |> set_dimensions(d_pd.width, d_pd.height)
     |> push_pixel_data(buffer_black, buffer_accent)
     |> display_update_sequence()
     |> trigger_display_update()
@@ -86,8 +88,8 @@ defmodule Inky.Commands do
     send_command(pins, 0x7E, 0x3B)
   end
 
-  defp set_gate(pins, display) do
-    data = <<display.packed_dimensions.height::unsigned-little-integer-16, 0>>
+  defp set_gate(pins, packed_height) do
+    data = <<packed_height::unsigned-little-integer-16, 0>>
     send_command(pins, 0x01, data)
   end
 
@@ -136,9 +138,8 @@ defmodule Inky.Commands do
     send_command(pins, 0x32, luts)
   end
 
-  defp set_dimensions(pins, display) do
-    width_data = display.packed_dimensions.width
-    height_data = <<0, 0, display.packed_dimensions.height::unsigned-little-integer-16>>
+  defp set_dimensions(pins, width_data, packed_height) do
+    height_data = <<0, 0, packed_height::unsigned-little-integer-16>>
 
     pins
     # Set RAM X Start/End

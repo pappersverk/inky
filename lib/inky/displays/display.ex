@@ -55,8 +55,8 @@ defmodule Inky.Displays.Display do
   defp packed_height(type, width, height) do
     rows =
       case type do
-        :phat -> width
         :what -> height
+        :phat -> width
       end
 
     # Little endian, unsigned short
