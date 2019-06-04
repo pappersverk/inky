@@ -49,7 +49,7 @@ defmodule Inky.Displays.Display do
         :phat -> height
       end
 
-    <<trunc(columns / 8) - 1::16>>
+    <<trunc(columns / 8) - 1>>
   end
 
   defp packed_height(type, width, height) do

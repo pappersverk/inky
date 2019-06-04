@@ -54,7 +54,7 @@ defmodule Inky.Commands do
   end
 
   defp set_gate(pins, packed_height) do
-    data = <<packed_height::unsigned-little-integer-16, 0>>
+    data = packed_height <> <<0x00>>
     send_command(pins, 0x01, data)
   end
 
@@ -104,7 +104,7 @@ defmodule Inky.Commands do
   end
 
   defp set_dimensions(pins, width_data, packed_height) do
-    height_data = <<0, 0, packed_height::unsigned-little-integer-16>>
+    height_data = <<0, 0>> <> packed_height
 
     pins
     # Set RAM X Start/End
