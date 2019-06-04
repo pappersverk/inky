@@ -2,8 +2,17 @@ defmodule Inky.Commands do
   alias Inky.InkyIO
 
   # API
-  def update(pins, display, buffer_black, buffer_accent) do
+  def update(pins, display, buffer_black, buffer_accent, requires_reset) do
     d_pd = display.packed_dimensions
+
+    if requires_reset do
+      # This is all side-effect
+      pins
+      |> reset()
+      |> soft_reset()
+
+      :ok = await_device(pins)
+    end
 
     pins
     |> set_analog_block_control()
@@ -26,6 +35,11 @@ defmodule Inky.Commands do
     |> deep_sleep()
 
     :ok
+  end
+
+  def reset(pins) do
+    InkyIO.reset(pins)
+    pins
   end
 
   def soft_reset(pins) do
@@ -105,6 +119,7 @@ defmodule Inky.Commands do
 
   defp set_dimensions(pins, width_data, packed_height) do
     height_data = <<0, 0>> <> packed_height
+    width_data = <<0>> <> width_data
 
     pins
     # Set RAM X Start/End

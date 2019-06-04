@@ -67,7 +67,8 @@ defmodule Inky do
     black_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :black)
     accent_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :accent)
 
-    Commands.update(pins, display, black_bytes, accent_bytes)
+    Commands.update(pins, display, black_bytes, accent_bytes, state.requires_reset)
+    %{state | requires_reset: true}
   end
 
   # init helpers

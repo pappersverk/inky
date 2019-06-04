@@ -12,7 +12,7 @@ state =
     end)
   end)
 
-Inky.show(state)
+state = Inky.show(state)
 
 # Quadrants (one striped)
 state = Inky.init(:phat, :red)
@@ -42,7 +42,7 @@ state =
     end)
   end)
 
-Inky.show(state)
+state = Inky.show(state)
 
 # Sections, colored
 

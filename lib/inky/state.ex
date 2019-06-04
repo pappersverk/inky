@@ -4,5 +4,6 @@ defmodule Inky.State do
             pins: nil,
             display: nil,
             packed_height: nil,
-            pixels: %{}
+            pixels: %{},
+            requires_reset: nil
 end
