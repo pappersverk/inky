@@ -20,6 +20,7 @@ defmodule Inky do
   alias Inky.Commands
   alias Inky.Displays.Display
   alias Inky.InkyIO
+  alias Inky.PixelUtil
   alias Inky.State
 
   # Used in logo example
@@ -61,21 +62,10 @@ defmodule Inky do
     # Note: Rotation handled when converting to bitstring
     pixels = state.pixels
     display = state.display
-    accent = display.accent
     pins = state.pins
 
-    # TODO: (???) consider replacing :black with :on
-    black_bytes =
-      Commands.pixels_to_bitstring(pixels, display, fn
-        :black -> 0
-        _ -> 1
-      end)
-
-    accent_bytes =
-      Commands.pixels_to_bitstring(pixels, display, fn
-        ^accent -> 1
-        _ -> 0
-      end)
+    black_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :black)
+    accent_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :accent)
 
     Commands.update(pins, display, black_bytes, accent_bytes)
   end
