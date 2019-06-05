@@ -3,51 +3,28 @@ defmodule Inky do
   Documentation for Inky.
   """
 
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> alias Inky
-      iex> state = Inky.setup(nil, :phat, :red)
-      iex> state = Enum.reduce(0..(state.height - 1), state, fn y, state ->Enum.reduce(0..(state.width - 1), state, fn x, state ->Inky.set_pixel(state, x, y, state.red)end)end)
-      iex> Inky.show(state)
-
-  """
+  defmodule State do
+    @enforce_keys [:display, :hal_state]
+    defstruct type: nil,
+              hal_state: nil,
+              display: nil,
+              pixels: %{}
+  end
 
   require Integer
 
   alias Inky.Commands
   alias Inky.Displays.Display
-  alias Inky.InkyIO
   alias Inky.PixelUtil
-  alias Inky.State
-
-  # Used in logo example
-  # inkyphat and inkywhat classes
-  # color constants: RED, BLACK, WHITE
-  # dimension constants: WIDTH, HEIGHT
-  # PIL: putpixel(value)
-  # set_image
-  # show
-
-  # SPI bus options include:
-  # * `mode`: This specifies the clock polarity and phase to use. (0)
-  # * `bits_per_word`: bits per word on the bus (8)
-  # * `speed_hz`: bus speed (1000000)
-  # * `delay_us`: delay between transaction (10)
 
   # API
 
   def init(type, accent)
       when type in [:phat, :what] and accent in [:black, :red, :yellow] do
-    display = init_state_display(type, accent)
-    pins = InkyIO.init_pins()
+    display = Display.spec_for(type, accent)
+    hal_state = Commands.init_io()
 
-    %State{display: display, pins: pins}
-    |> do_reset()
-    |> do_soft_reset()
-    |> do_await_device()
+    %State{display: display, hal_state: hal_state}
   end
 
   def set_pixel(state = %State{}, x, y, value) when value in [:white, :black, :red, :yellow] do
@@ -67,29 +44,8 @@ defmodule Inky do
     black_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :black)
     accent_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :accent)
 
-    Commands.update(pins, display, black_bytes, accent_bytes, state.requires_reset)
+    Commands.update(pins, display, black_bytes, accent_bytes)
     %{state | requires_reset: true}
-  end
-
-  # init helpers
-
-  defp init_state_display(type, accent) do
-    Display.spec_for(type, accent)
-  end
-
-  defp do_reset(state) do
-    InkyIO.reset(state.pins)
-    state
-  end
-
-  def do_soft_reset(state) do
-    Commands.soft_reset(state.pins)
-    state
-  end
-
-  def do_await_device(state) do
-    Commands.await_device(state.pins)
-    state
   end
 
   # MISC
