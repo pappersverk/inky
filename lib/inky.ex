@@ -39,13 +39,13 @@ defmodule Inky do
     # Note: Rotation handled when converting to bitstring
     pixels = state.pixels
     display = state.display
-    pins = state.pins
 
+    # TODO: make a single function to do these things(?) and return {:ok, {buf_black, buf_accent}}
     black_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :black)
     accent_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :accent)
 
-    Commands.update(pins, display, black_bytes, accent_bytes)
-    %{state | requires_reset: true}
+    Commands.update(state.hal_state, display, black_bytes, accent_bytes)
+    state
   end
 
   # MISC
