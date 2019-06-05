@@ -47,42 +47,4 @@ defmodule Inky do
     Commands.update(state.hal_state, display, black_bytes, accent_bytes)
     state
   end
-
-  # MISC
-
-  def log_grid(state = %State{}) do
-    grid =
-      Enum.reduce(0..(state.height - 1), "", fn y, grid ->
-        row =
-          Enum.reduce(0..(state.width - 1), "", fn x, row ->
-            color_value = Map.get(state.pixels, {x, y}, 0)
-
-            row <>
-              case color_value do
-                0 -> "W"
-                1 -> "B"
-                2 -> "R"
-              end
-          end)
-
-        grid <> row <> "\n"
-      end)
-
-    IO.puts(grid)
-    state
-  end
-
-  def try_get_state() do
-    state = Inky.init(:phat, :red)
-
-    Enum.reduce(0..(state.height - 1), state, fn y, state ->
-      Enum.reduce(0..(state.width - 1), state, fn x, state ->
-        Inky.set_pixel(state, x, y, state.red)
-      end)
-    end)
-  end
-
-  def try(state) do
-    Inky.show(state)
-  end
 end
