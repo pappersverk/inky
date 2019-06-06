@@ -54,46 +54,43 @@ defmodule Inky.RpiIO do
   end
 
   @impl InkyIO
-  def sleep(_state, duration_ms) do
+  def handle_sleep(_state, duration_ms) do
     :timer.sleep(duration_ms)
   end
 
   @impl InkyIO
-  def read_busy(pins) do
+  def handle_read_busy(pins) do
     # TODO: consider not matching and leave it up to caller?
     GPIO.read(pins.busy_pid)
   end
 
   @impl InkyIO
-  def write_reset(pins, value) do
+  def handle_reset(pins, value) do
     # TODO: consider not matching and leave it up to caller?
     :ok = GPIO.write(pins.reset_pid, value)
   end
 
   @impl InkyIO
-  def send_command(pins, command, data) do
-    send_command(pins, <<command>>)
-    send_data(pins, data)
+  def handle_command(pins, command, data) do
+    write_command(pins, command)
+    write_data(pins, data)
   end
 
   @impl InkyIO
-  def send_command(pins, command) when is_binary(command) do
-    spi_write(pins, @spi_command, command)
-  end
-
-  @impl InkyIO
-  def send_command(pins, command) do
-    spi_write(pins, @spi_command, <<command>>)
+  def handle_command(pins, command) do
+    write_command(pins, command)
   end
 
   # IO primitives
 
-  defp send_data(pins, data) when is_integer(data) do
-    spi_write(pins, @spi_data, <<data>>)
+  defp write_command(pins, command) do
+    value = maybe_wrap_integer(command)
+    spi_write(pins, @spi_command, value)
   end
 
-  defp send_data(pins, data) do
-    spi_write(pins, @spi_data, data)
+  defp write_data(pins, data) do
+    value = maybe_wrap_integer(data)
+    spi_write(pins, @spi_data, value)
   end
 
   defp spi_write(pins, data_or_command, values) when is_list(values) do
@@ -102,9 +99,13 @@ defmodule Inky.RpiIO do
     {:ok, <<_::binary>>} = SPI.transfer(pins.spi_pid, :erlang.list_to_binary(values))
   end
 
-  defp spi_write(pins, data_or_command, values) when is_binary(values) do
+  defp spi_write(pins, data_or_command, value) when is_binary(value) do
     # TODO: consider not matching and leave it up to caller?
     :ok = GPIO.write(pins.dc_pid, data_or_command)
-    {:ok, <<_::binary>>} = SPI.transfer(pins.spi_pid, values)
+    {:ok, <<_::binary>>} = SPI.transfer(pins.spi_pid, value)
   end
+
+  # internals
+
+  defp maybe_wrap_integer(value), do: if(is_integer(value), do: <<value>>, else: value)
 end

@@ -50,10 +50,10 @@ defmodule Inky.Commands do
     # :ok = :timer.sleep(100)
     # :ok = GPIO.write(pins.reset_pid, 1)
     # :ok = :timer.sleep(100)
-    io_call(state, :write_reset, [0])
-    io_call(state, :sleep, [100])
-    io_call(state, :write_reset, [1])
-    io_call(state, :sleep, [100])
+    io_call(state, :handle_reset, [0])
+    io_call(state, :handle_sleep, [100])
+    io_call(state, :handle_reset, [1])
+    io_call(state, :handle_sleep, [100])
     state
   end
 
@@ -62,53 +62,53 @@ defmodule Inky.Commands do
   defp wait_before_sleep(state) do
     # :timer.sleep(50)
     # await_device(state)
-    io_call(state, :sleep, [50])
+    io_call(state, :handle_sleep, [50])
     await_device(state)
   end
 
   defp await_device(state) do
     # should_wait = InkyIO.read_busy(state) == 1
-    should_wait = io_call(state, :read_busy) == 1
+    should_wait = io_call(state, :handle_read_busy) == 1
 
     if should_wait do
       # :timer.sleep(10)
-      io_call(state, :sleep, [10])
+      io_call(state, :handle_sleep, [10])
       await_device(state)
     else
       state
     end
   end
 
-  defp soft_reset(state), do: send_command(state, 0x12)
-  defp set_analog_block_control(state), do: send_command(state, 0x74, 0x54)
-  defp set_digital_block_control(state), do: send_command(state, 0x7E, 0x3B)
-  defp set_gate(state, packed_height), do: send_command(state, 0x01, packed_height <> <<0x00>>)
-  defp set_gate_driving_voltage(state), do: send_command(state, 0x03, [0b10000, 0b0001])
-  defp dummy_line_period(state), do: send_command(state, 0x3A, 0x07)
-  defp set_gate_line_width(state), do: send_command(state, 0x3B, 0x04)
+  defp soft_reset(state), do: write_command(state, 0x12)
+  defp set_analog_block_control(state), do: write_command(state, 0x74, 0x54)
+  defp set_digital_block_control(state), do: write_command(state, 0x7E, 0x3B)
+  defp set_gate(state, packed_height), do: write_command(state, 0x01, packed_height <> <<0x00>>)
+  defp set_gate_driving_voltage(state), do: write_command(state, 0x03, [0b10000, 0b0001])
+  defp dummy_line_period(state), do: write_command(state, 0x3A, 0x07)
+  defp set_gate_line_width(state), do: write_command(state, 0x3B, 0x04)
   # Data entry mode setting 0x03 = X/Y increment
-  defp set_data_entry_mode(state), do: send_command(state, 0x11, 0x03)
-  defp power_on(state), do: send_command(state, 0x04)
+  defp set_data_entry_mode(state), do: write_command(state, 0x11, 0x03)
+  defp power_on(state), do: write_command(state, 0x04)
 
   defp vcom_register(state) do
     # VCOM Register, 0x3c = -1.5v?
-    send_command(state, 0x2C, 0x3C)
-    send_command(state, 0x3C, 0x00)
+    write_command(state, 0x2C, 0x3C)
+    write_command(state, 0x3C, 0x00)
   end
 
   # TODO: (issue #6) Always black border
-  defp set_border_color(state), do: send_command(state, 0x3C, 0x00)
+  defp set_border_color(state), do: write_command(state, 0x3C, 0x00)
 
   defp configure_if_yellow(state, accent) do
     # Set voltage of VSH and VSL on Yellow device
     if accent == :yellow do
-      send_command(state, 0x04, 0x07)
+      write_command(state, 0x04, 0x07)
     else
       state
     end
   end
 
-  defp set_luts(state, luts), do: send_command(state, 0x32, luts)
+  defp set_luts(state, luts), do: write_command(state, 0x32, luts)
 
   defp set_dimensions(state, width_data, packed_height) do
     height_data = <<0, 0>> <> packed_height
@@ -116,9 +116,9 @@ defmodule Inky.Commands do
 
     state
     # Set RAM X Start/End
-    |> send_command(0x44, width_data)
+    |> write_command(0x44, width_data)
     # Set RAM Y Start/End
-    |> send_command(0x45, height_data)
+    |> write_command(0x45, height_data)
   end
 
   defp push_pixel_data(state, buffer_black, buffer_accent) do
@@ -131,28 +131,28 @@ defmodule Inky.Commands do
 
   defp do_push_pixel_data(state, pixel_cmd, pixel_buffer) do
     # Set RAM X Pointer start
-    send_command(state, 0x4E, 0x00)
+    write_command(state, 0x4E, 0x00)
 
     # Set RAM Y Pointer start
-    send_command(state, 0x4F, <<0x00, 0x00>>)
-    send_command(state, pixel_cmd, pixel_buffer)
+    write_command(state, 0x4F, <<0x00, 0x00>>)
+    write_command(state, pixel_cmd, pixel_buffer)
   end
 
-  defp display_update_sequence(state), do: send_command(state, 0x22, 0xC7)
-  defp trigger_display_update(state), do: send_command(state, 0x20)
-  defp deep_sleep(state), do: send_command(state, 0x10, 0x01)
+  defp display_update_sequence(state), do: write_command(state, 0x22, 0xC7)
+  defp trigger_display_update(state), do: write_command(state, 0x20)
+  defp deep_sleep(state), do: write_command(state, 0x10, 0x01)
 
   # pipe-able wrappers
 
-  defp send_command(state, command) do
+  defp write_command(state, command) do
     # InkyIO.send_command(pins, command)
-    io_call(state, :send_command, [command])
+    io_call(state, :handle_command, [command])
     state
   end
 
-  defp send_command(state, command, data) do
+  defp write_command(state, command, data) do
     # InkyIO.send_command(pins, command, data)
-    io_call(state, :send_command, [command, data])
+    io_call(state, :handle_command, [command, data])
     state
   end
 
