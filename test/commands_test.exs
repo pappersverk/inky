@@ -4,7 +4,26 @@ defmodule Inky.CommandsTest do
   alias Inky.Commands
   alias Inky.TestIO
 
-  import Inky.TestUtil
+  import Inky.TestUtil, only: [gather_messages: 0, pos2col: 2]
+  import Inky.TestVerifier, only: [load_spec: 2, check: 2]
+
+  defp init_pixels(display) do
+    for i <- 0..(display.width - 1),
+        j <- 0..(display.height - 1),
+        do: {{i, j}, pos2col(i, j)},
+        into: %{}
+  end
+
+  setup_all do
+    display = Inky.Displays.Display.spec_for(:phat)
+    pixels = init_pixels(display)
+
+    %{
+      display: display,
+      buf_black: Inky.PixelUtil.pixels_to_bitstring(pixels, display, :black),
+      buf_red: Inky.PixelUtil.pixels_to_bitstring(pixels, display, :red)
+    }
+  end
 
   describe "happy paths" do
     test "that init dispatches properly" do
@@ -15,35 +34,40 @@ defmodule Inky.CommandsTest do
       assert_received {:init, []}
     end
 
-    test "that update dispatches properly" do
-      # arrange
-      display = Inky.Displays.Display.spec_for(:phat)
+    # fail fast, just in case we have an infinite loop bug
+    @tag timeout: 5
+    test "that update dispatches properly when the device is never busy", ctx do
+      # arrange, read_busy always returns 0
+      init_opts = [read_busy: 0]
+      state = Commands.init_io(TestIO, init_opts)
 
-      pixels =
-        for i <- 0..(display.width - 1),
-            j <- 0..(display.height - 1),
-            do: {{i, j}, pos2col(i, j)},
-            into: %{}
+      # act
+      :ok = Commands.update(state, ctx.display, ctx.buf_black, ctx.buf_red)
 
+      # assert
+      assert_received {:init, init_opts}
+      assert TestIO.assert_expectations() == :ok
+      spec = load_spec("data/success1.dat", __DIR__)
+      mailbox = gather_messages()
+      assert check(spec, mailbox) == {:ok, 31}
+    end
+
+    # fail fast, just in case we have an infinite loop bug
+    @tag timeout: 5
+    test "that update dispatches properly when the device is a little busy", ctx do
+      # arrange, read_busy is a little busy each time, we expect two wait-loops.
       init_opts = [read_busy: [1, 1, 1, 0, 1, 1, 0]]
       state = Commands.init_io(TestIO, init_opts)
 
-      # TODO: replace these with meaningful, _MINIMAL_ binaries (test display required?)
-      buf_black = Inky.PixelUtil.pixels_to_bitstring(pixels, display, :black)
-      buf_red = Inky.PixelUtil.pixels_to_bitstring(pixels, display, :red)
-      Inky.PixelUtil.pixels_to_bitstring(pixels, display, :red)
-
       # act
-      :ok = Commands.update(state, display, buf_black, buf_red)
+      :ok = Commands.update(state, ctx.display, ctx.buf_black, ctx.buf_red)
 
       # assert
-      # first drop the init, because we're not testing that.
       assert_received {:init, init_opts}
-
-      spec = Inky.TestVerifier.load("data/success.dat", __DIR__)
+      assert TestIO.assert_expectations() == :ok
+      spec = load_spec("data/success2.dat", __DIR__)
       mailbox = gather_messages()
-      assert Inky.TestVerifier.check(spec, mailbox) == {:ok, 41}
-      # Inky.TestVerifier.store(mailbox, "data/success.dat")
+      assert check(spec, mailbox) == {:ok, 41}
     end
   end
 end

@@ -12,11 +12,11 @@ defmodule Inky.TestVerifierTest do
       assert check([], []) == {:ok, 0}
 
       # simple specs
-      assert check([:_], [:foo])
-      assert check([:bitstring], ["hey hey"])
-      assert check([:bitstring], [<<5::7>>])
-      assert check([:some_term], [:some_term])
-      assert check([{:foo, 1}], [{:foo, 1}])
+      assert check([:_], [:foo]) == {:ok, 1}
+      assert check([:bitstring], ["hey hey"]) == {:ok, 1}
+      assert check([:bitstring], [<<5::7>>]) == {:ok, 1}
+      assert check([:some_term], [:some_term]) == {:ok, 1}
+      assert check([{:foo, 1}], [{:foo, 1}]) == {:ok, 1}
     end
   end
 

@@ -43,13 +43,6 @@ defmodule Inky.Commands do
   end
 
   defp reset(state) do
-    # state[:io_mod].reset(state[:io_state])
-    # hal_state = :aoeu
-
-    # :ok = GPIO.write(pins.reset_pid, 0)
-    # :ok = :timer.sleep(100)
-    # :ok = GPIO.write(pins.reset_pid, 1)
-    # :ok = :timer.sleep(100)
     io_call(state, :handle_reset, [0])
     io_call(state, :handle_sleep, [100])
     io_call(state, :handle_reset, [1])
@@ -60,18 +53,14 @@ defmodule Inky.Commands do
   # SPI commands
 
   defp wait_before_sleep(state) do
-    # :timer.sleep(50)
-    # await_device(state)
     io_call(state, :handle_sleep, [50])
     await_device(state)
   end
 
   defp await_device(state) do
-    # should_wait = InkyIO.read_busy(state) == 1
     should_wait = io_call(state, :handle_read_busy) == 1
 
     if should_wait do
-      # :timer.sleep(10)
       io_call(state, :handle_sleep, [10])
       await_device(state)
     else
@@ -145,13 +134,11 @@ defmodule Inky.Commands do
   # pipe-able wrappers
 
   defp write_command(state, command) do
-    # InkyIO.send_command(pins, command)
     io_call(state, :handle_command, [command])
     state
   end
 
   defp write_command(state, command, data) do
-    # InkyIO.send_command(pins, command, data)
     io_call(state, :handle_command, [command, data])
     state
   end
