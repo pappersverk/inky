@@ -4,6 +4,8 @@ defmodule Inky do
   """
 
   defmodule State do
+    @moduledoc false
+
     @enforce_keys [:display, :hal_state]
     defstruct type: nil,
               hal_state: nil,
