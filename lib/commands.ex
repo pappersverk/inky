@@ -1,5 +1,12 @@
 defmodule Inky.Commands do
+  @moduledoc """
+  `Commands` is responsible for sending commands to the Inky screen. It delegates
+  to whatever IO module its user provides at init
+  """
+
   defmodule State do
+    @moduledoc false
+
     @state_fields [:io_mod, :io_state]
 
     @enforce_keys @state_fields
@@ -85,7 +92,6 @@ defmodule Inky.Commands do
     write_command(state, 0x3C, 0x00)
   end
 
-  # TODO: (issue #6) Always black border
   defp set_border_color(state), do: write_command(state, 0x3C, 0x00)
 
   defp configure_if_yellow(state, accent) do

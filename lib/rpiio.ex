@@ -1,11 +1,17 @@
 defmodule Inky.RpiIO do
+  @moduledoc """
+  An InkyIO implementation intended for use with raspberry pis and relies on
+  Circuits.GPIO and Cirtuits.SPI.
+  """
   @behaviour Inky.InkyIO
 
-  alias Inky.InkyIO
-  alias Circuits.SPI
   alias Circuits.GPIO
+  alias Circuits.SPI
+  alias Inky.InkyIO
 
   defmodule State do
+    @moduledoc false
+
     @state_fields [:dc_pid, :reset_pid, :busy_pid, :spi_pid]
 
     @enforce_keys @state_fields
@@ -27,13 +33,6 @@ defmodule Inky.RpiIO do
   @spi_speed_hz 488_000
   @spi_command 0
   @spi_data 1
-
-  # Note: unused
-  @mosi_pin 10
-  # Note: unused
-  @sclk_pin 11
-  # Note: unused
-  @spi_chunk_size 4096
 
   # API
 
@@ -60,13 +59,11 @@ defmodule Inky.RpiIO do
 
   @impl InkyIO
   def handle_read_busy(pins) do
-    # TODO: consider not matching and leave it up to caller?
     GPIO.read(pins.busy_pid)
   end
 
   @impl InkyIO
   def handle_reset(pins, value) do
-    # TODO: consider not matching and leave it up to caller?
     :ok = GPIO.write(pins.reset_pid, value)
   end
 
@@ -94,13 +91,11 @@ defmodule Inky.RpiIO do
   end
 
   defp spi_write(pins, data_or_command, values) when is_list(values) do
-    # TODO: consider not matching and leave it up to caller?
     :ok = GPIO.write(pins.dc_pid, data_or_command)
     {:ok, <<_::binary>>} = SPI.transfer(pins.spi_pid, :erlang.list_to_binary(values))
   end
 
   defp spi_write(pins, data_or_command, value) when is_binary(value) do
-    # TODO: consider not matching and leave it up to caller?
     :ok = GPIO.write(pins.dc_pid, data_or_command)
     {:ok, <<_::binary>>} = SPI.transfer(pins.spi_pid, value)
   end

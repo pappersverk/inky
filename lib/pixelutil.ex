@@ -1,4 +1,8 @@
 defmodule Inky.PixelUtil do
+  @moduledoc """
+  `PixelUtil` maps pixels to bitstrings to be sent to an Inky screen
+  """
+
   def pixels_to_bitstring(pixels, display, color) do
     rotation = display.rotation / 90
     width = display.width
