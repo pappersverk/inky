@@ -22,7 +22,8 @@ defmodule InkyZeroNerves.MixProject do
   defp deps do
     [
       {:circuits_gpio, "~> 0.4"},
-      {:circuits_spi, "~> 0.1"}
+      {:circuits_spi, "~> 0.1"},
+      {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false}
     ]
   end
 end
