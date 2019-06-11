@@ -50,10 +50,10 @@ defmodule Inky do
 
     # Note: Rotation handled when converting to bitstring
     pixels = state.pixels
-    display = state.display
+    display = %Display{width: w, height: h, rotation: r} = state.display
 
-    black_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :black)
-    accent_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :accent)
+    black_bytes = PixelUtil.pixels_to_bitstring(pixels, w, h, r, :black)
+    accent_bytes = PixelUtil.pixels_to_bitstring(pixels, w, h, r, :accent)
 
     Commands.update(state.hal_state, display, black_bytes, accent_bytes)
     state
