@@ -1,4 +1,8 @@
 defmodule Inky.InkyIO do
+  @moduledoc """
+  A behaviour for defining how IO is performed on a specific platform.
+  """
+
   @type init_opt :: {:pin_mappings, map()}
 
   @type io_state :: any()

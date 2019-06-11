@@ -1,4 +1,8 @@
 defmodule Inky.Displays.Display do
+  @moduledoc """
+  Display creates specifications for displays and accent colors
+  """
+
   alias Inky.Displays.LookupTables
 
   @enforce_keys [:type, :width, :height, :packed_dimensions, :rotation, :accent, :luts]

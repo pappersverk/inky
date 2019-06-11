@@ -1,4 +1,10 @@
 defmodule Inky.Displays.LookupTables do
+  @moduledoc """
+  LookupTables are used for voltage control when updating the screen.
+
+  LookupTables are explained in further detail in https://github.com/pimoroni/inky/blob/master/library/inky/inky.py#L95
+  """
+
   @type variant :: :phat | :what
   @type accent :: :black | :red | :yellow
   @type color :: :white | accent()
