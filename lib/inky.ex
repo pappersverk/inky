@@ -42,7 +42,6 @@ defmodule Inky do
     pixels = state.pixels
     display = state.display
 
-    # TODO: make a single function to do these things(?) and return {:ok, {buf_black, buf_accent}}
     black_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :black)
     accent_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :accent)
 

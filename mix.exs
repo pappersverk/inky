@@ -1,4 +1,4 @@
-defmodule InkyZeroNerves.MixProject do
+defmodule Inky.MixProject do
   use Mix.Project
 
   def project do

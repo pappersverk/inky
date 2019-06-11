@@ -1,33 +1,53 @@
 # InkyZeroNerves
 
-This is a very early-days library that is capable of setting pixels and updating the Inky PHAT or WHAT displays. It is a port of the python library at https://github.com/pimoroni/inky
+This is a library that is capable of setting pixels and updating the Inky PHAT and WHAT displays. It is a port of the python library at https://github.com/pimoroni/inky
 
 Check out testrun.exs for some simple examples.
 
-## Targets
+It currently only runs on-device aside from the testing.
 
-Nerves applications produce images for hardware targets based on the
-`MIX_TARGET` environment variable. If `MIX_TARGET` is unset, `mix` builds an
-image that runs on the host (e.g., your laptop). This is useful for executing
-logic tests, running utilities, and debugging. Other targets are represented by
-a short name like `rpi3` that maps to a Nerves system image for that platform.
-All of this logic is in the generated `mix.exs` and may be customized. For more
-information about targets see:
+## Getting started
 
-https://hexdocs.pm/nerves/targets.html#content
+Add inky to your mix.exs, we will try to get in on that sweet hex action eventually:
 
-## Getting Started
+```elixir
+{:inky, github: lawik/inky}
+```
 
-To start your Nerves app:
-  * `export MIX_TARGET=my_target` or prefix every command with
-    `MIX_TARGET=my_target`. For example, `MIX_TARGET=rpi3`
-  * Install dependencies with `mix deps.get`
-  * Create firmware with `mix firmware`
-  * Burn to an SD card with `mix firmware.burn`
+Run `mix deps.get` to get the new dep.
 
-## Learn more
+In typical usage this would be inside a nerves project. If Inky is installed in your application you can do the following to test it and your display (note the config in init, adjust accordingly):
 
-  * Official docs: https://hexdocs.pm/nerves/getting-started.html
-  * Official website: http://www.nerves-project.org/
-  * Discussion Slack elixir-lang #nerves ([Invite](https://elixir-slackin.herokuapp.com/))
-  * Source: https://github.com/nerves-project/nerves
+```elixir
+# Quadrants (one striped)
+state = Inky.init(:phat, :red)
+
+state =
+  Enum.reduce(0..(state.display.height - 1), state, fn y, state ->
+    Enum.reduce(0..(state.display.width - 1), state, fn x, state ->
+      color = cond do
+        x > state.display.width / 2 ->
+          cond do
+            y > state.display.height / 2 -> :red
+            true ->
+              cond do
+                rem(x, 2) == 0 -> :white
+                true -> :black
+              end
+          end
+        true -> 
+          cond do
+            y > state.display.height / 2 ->
+              :black
+            true ->
+              :white
+          end
+      end
+      Inky.set_pixel(state, x, y, color)
+    end)
+  end)
+
+state = Inky.show(state)
+```
+
+Some other variants are available in testrun.exs.
