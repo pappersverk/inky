@@ -11,7 +11,7 @@ It currently only runs on-device aside from the testing.
 Add inky to your mix.exs, we will try to get in on that sweet hex action eventually:
 
 ```elixir
-{:inky, github: lawik/inky}
+{:inky, github: "lawik/inky"}
 ```
 
 Run `mix deps.get` to get the new dep.
