@@ -23,8 +23,9 @@ defmodule Inky.CommandsTest do
 
     %{
       display: display,
-      buf_black: Inky.PixelUtil.pixels_to_bitstring(pixels, w, h, r, :black),
-      buf_red: Inky.PixelUtil.pixels_to_bitstring(pixels, w, h, r, :red)
+      buf_black: Inky.PixelUtil.pixels_to_bits(pixels, w, h, r, %{black: 0, miss: 1}),
+      buf_red:
+        Inky.PixelUtil.pixels_to_bits(pixels, w, h, r, %{red: 1, yellow: 1, accent: 1, miss: 0})
     }
   end
 
