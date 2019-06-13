@@ -32,7 +32,7 @@ defmodule Inky.PixelUtil do
       rotation_degrees
       |> div(90)
       |> rem(4)
-      |> (&if(&1 < 0, do: &1 + 4, else: &1)).()
+      |> (fn r -> if(r < 0, do: r + 4, else: r) end).()
 
     w_n = width - 1
     h_n = height - 1
