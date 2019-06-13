@@ -27,7 +27,6 @@ defmodule Inky.PixelUtil do
       [0, 1, 2, 3, 0, 1, 2, 3, 0, 1]
   """
   def normalised_rotation(degrees) do
-    # Check that normalisation works and wraps correctly
     r = degrees |> div(90) |> rem(4)
     if(r < 0, do: r + 4, else: r)
   end
