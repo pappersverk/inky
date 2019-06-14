@@ -3,6 +3,8 @@ defmodule Inky do
   The Inky module provides the public API for interacting with the display.
   """
 
+  use GenServer
+
   defmodule State do
     @moduledoc false
     @enforce_keys [:display, :hal_state]
@@ -32,12 +34,22 @@ defmodule Inky do
     - type: Atom for either :phat or :what
     - accent: Accent color, the color the display supports aside form white and black. Atom, :black, :red or :yellow.
   """
-  def init(type, accent)
-      when type in [:phat, :what] and accent in [:black, :red, :yellow] do
+  def start_link(args \\ []) do
+    opts = if(args[:name], do: [name: args[:name]], else: [])
+    GenServer.start_link(__MODULE__, args, opts)
+  end
+
+  # Callbacks
+
+  @impl GenServer
+  def init(args) do
+    type = args.type
+    accent = args.accent
+
     display = Display.spec_for(type, accent)
     hal_state = Commands.init_io()
 
-    %State{display: display, hal_state: hal_state}
+    {:ok, %State{display: display, hal_state: hal_state}}
   end
 
   def set_pixel(state = %State{}, x, y, value) when value in [:white, :black, :red, :yellow] do

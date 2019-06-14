@@ -14,6 +14,7 @@ defmodule Inky.Displays.Display do
             accent: :black,
             luts: <<>>
 
+  @spec spec_for(:phat | :what, :black | :red | :yellow) :: Inky.Displays.Display.t()
   def spec_for(type, accent \\ :black)
 
   def spec_for(type = :phat, accent) do
