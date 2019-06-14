@@ -10,6 +10,8 @@ defmodule Inky.MixProject do
       deps: deps(),
       package: [
         name: "inky",
+        description:
+          "A library to drive the Inky series of eInk displays from Pimoroni. Ported from the original Python project, all Elixir.",
         licenses: ["Apache-2.0"],
         links: %{"GitHub" => "https://github.com/pappersverk/inky"}
       ]
