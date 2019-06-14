@@ -4,56 +4,71 @@ defmodule Inky.PixelUtil do
   """
 
   def pixels_to_bits(pixels, width, height, rotation_degrees, color_map) do
-    opts = bitstring_traversal_opts(rotation_degrees, width, height)
-    do_pixels_to_bits(pixels, color_map, opts)
+    {outer_axis, dimension_vectors} =
+      rotation_degrees
+      |> normalised_rotation()
+      |> rotation_opts()
+
+    dimension_vectors
+    |> rotated_ranges(width, height)
+    |> do_pixels_to_bits(
+      &pixels[pixel_key(outer_axis, &1, &2)],
+      &(color_map[&1] || color_map.miss)
+    )
   end
 
   @doc """
   Only exposed for testing purposes. Do not use.
 
-  ## Doctests
-
-      iex> Inky.PixelUtil.bitstring_traversal_opts(0, 212, 104)
-      {:y_outer, 0, 103, 0, 211}
-
-      iex> Inky.PixelUtil.bitstring_traversal_opts(180, 212, 104)
-      {:y_outer, 103, 0, 211, 0}
-
-      iex> Inky.PixelUtil.bitstring_traversal_opts(-90, 212, 104)
-      {:x_outer, 211, 0, 0, 103}
-
-      iex> Inky.PixelUtil.bitstring_traversal_opts(90, 212, 104)
-      {:x_outer, 0, 211, 103, 0}
-
+      iex> Enum.map(
+      ...>     [-360, -270, -180, -90, 0, 90, 180, 270, 360, 450],
+      ...>     &Inky.PixelUtil.normalised_rotation/1
+      ...> )
+      [0, 1, 2, 3, 0, 1, 2, 3, 0, 1]
   """
-  def bitstring_traversal_opts(rotation_degrees, width, height) do
-    # Simplify and wrap around rotations
-    rotation =
-      rotation_degrees
-      |> div(90)
-      |> rem(4)
-      |> (fn r -> if(r < 0, do: r + 4, else: r) end).()
+  def normalised_rotation(degrees) do
+    # Check that normalisation works and wraps correctly
+    r = degrees |> div(90) |> rem(4)
+    if(r < 0, do: r + 4, else: r)
+  end
 
-    w_n = width - 1
-    h_n = height - 1
+  @doc """
+  Only exposed for testing purposes. Do not use.
 
+      iex> Enum.map([3, 1, 2, 0], &Inky.PixelUtil.rotation_opts/1)
+      [{:x, {{:x, -1}, {:y, 1}}},
+       {:x, {{:x, 1}, {:y, -1}}},
+       {:y, {{:y, -1}, {:x, -1}}},
+       {:y, {{:y, 1}, {:x, 1}}}]
+  """
+  def rotation_opts(rotation) do
     case rotation do
-      3 -> {:x_outer, w_n, 0, 0, h_n}
-      1 -> {:x_outer, 0, w_n, h_n, 0}
-      2 -> {:y_outer, h_n, 0, w_n, 0}
-      0 -> {:y_outer, 0, h_n, 0, w_n}
+      3 -> {:x, {{:x, -1}, {:y, 1}}}
+      1 -> {:x, {{:x, 1}, {:y, -1}}}
+      2 -> {:y, {{:y, -1}, {:x, -1}}}
+      0 -> {:y, {{:y, 1}, {:x, 1}}}
     end
   end
 
-  defp do_pixels_to_bits(pixels, color_map, {order, i_1, i_n, j_1, j_n}) do
-    cmap = &(color_map[&1] || color_map.miss)
+  defp rotated_ranges({i_spec, j_spec}, i_n, j_m) do
+    {
+      rotated_dimension(i_n, j_m, i_spec),
+      rotated_dimension(i_n, j_m, j_spec)
+    }
+  end
 
-    for i <- i_1..i_n,
-        j <- j_1..j_n,
-        do: <<cmap.(pixels[pixel_key(order, i, j)])::size(1)>>,
+  defp rotated_dimension(width, _height, {:x, 1}), do: 0..(width - 1)
+  defp rotated_dimension(width, _height, {:x, -1}), do: (width - 1)..0
+  defp rotated_dimension(_width, height, {:y, 1}), do: 0..(height - 1)
+  defp rotated_dimension(_width, height, {:y, -1}), do: (height - 1)..0
+
+  defp do_pixels_to_bits({i_range, j_range}, pixel_picker, cmap) do
+    for i <- i_range,
+        j <- j_range,
+        do: <<cmap.(pixel_picker.(i, j))::size(1)>>,
         into: <<>>
   end
 
-  defp pixel_key(:x_outer, i, j), do: {i, j}
-  defp pixel_key(:y_outer, i, j), do: {j, i}
+  defp pixel_key(:x, i, j), do: {i, j}
+  defp pixel_key(:y, i, j), do: {j, i}
 end
