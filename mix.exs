@@ -10,7 +10,6 @@ defmodule Inky.MixProject do
       deps: deps(),
       package: [
         name: "inky",
-        organization: "pappersverk",
         licenses: ["Apache-2.0"],
         links: %{"GitHub" => "https://github.com/pappersverk/inky"}
       ]
@@ -29,7 +28,8 @@ defmodule Inky.MixProject do
     [
       {:circuits_gpio, "~> 0.4"},
       {:circuits_spi, "~> 0.1"},
-      {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
+      {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end
 end
