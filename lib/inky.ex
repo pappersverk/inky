@@ -1,10 +1,13 @@
 defmodule Inky do
   @moduledoc """
-  Documentation for Inky.
+  The Inky module provides the public API for interacting with the display.
   """
 
   defmodule State do
-    @moduledoc false
+    @moduledoc """
+    The State struct is used throughout the inky library to provide a structure
+    for the different pieces of data required to run the display.
+    """
 
     @enforce_keys [:display, :hal_state]
     defstruct type: nil,
@@ -19,8 +22,15 @@ defmodule Inky do
   alias Inky.Displays.Display
   alias Inky.PixelUtil
 
-  # API
+  @doc """
+  Initializes a display of the given configuration. This function will do some
+  of the necessary preparation to prepare communication with the display.
 
+  ## Parameters
+
+    - type: Atom for either :phat or :what
+    - accent: Accent color, the color the display supports aside form white and black. Atom, :black, :red or :yellow.
+  """
   def init(type, accent)
       when type in [:phat, :what] and accent in [:black, :red, :yellow] do
     display = Display.spec_for(type, accent)
