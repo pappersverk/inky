@@ -1,5 +1,7 @@
 # InkyZeroNerves
 
+[![CircleCI](https://circleci.com/gh/pappersverk/inky.svg?style=svg)](https://circleci.com/gh/pappersverk/inky)
+
 This is a library that is capable of setting pixels and updating the Inky PHAT and WHAT displays. It is a port of the python library at https://github.com/pimoroni/inky
 
 Check out testrun.exs for some simple examples.
