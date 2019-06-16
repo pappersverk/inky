@@ -4,6 +4,8 @@ defmodule Inky.Commands do
   to whatever IO module its user provides at init
   """
 
+  @default_io_mod Inky.RpiIO
+
   defmodule State do
     @moduledoc false
 
@@ -13,20 +15,40 @@ defmodule Inky.Commands do
     defstruct @state_fields
   end
 
-  @default_io_mod Inky.RpiIO
-
+  #
   # API
+  #
+
   def init_io(io_mod \\ @default_io_mod, io_args \\ []) do
     %State{io_mod: io_mod, io_state: io_mod.init(io_args)}
   end
 
-  def update(state = %State{}, display, buffer_black, buffer_accent) do
+  def update(state = %State{}, display, buf_black, buf_accent, push_policy \\ :await) do
+    reset(state)
+    soft_reset(state)
+
+    case pre_update(state, push_policy) do
+      :cont -> do_update(state, display, buf_black, buf_accent)
+      :halt -> {:error, :device_busy}
+    end
+  end
+
+  defp pre_update(state, :await) do
+    await_device(state)
+    :cont
+  end
+
+  defp pre_update(state, :once) do
+    case read_busy(state) do
+      0 -> :cont
+      1 -> :halt
+    end
+  end
+
+  defp do_update(state, display, buf_black, buf_accent) do
     d_pd = display.packed_dimensions
 
     state
-    |> reset()
-    |> soft_reset()
-    |> await_device()
     |> set_analog_block_control()
     |> set_digital_block_control()
     |> set_gate(d_pd.height)
@@ -40,39 +62,27 @@ defmodule Inky.Commands do
     |> configure_if_yellow(display.accent)
     |> set_luts(display.luts)
     |> set_dimensions(d_pd.width, d_pd.height)
-    |> push_pixel_data(buffer_black, buffer_accent)
+    |> push_pixel_data_bw(buf_black)
+    |> push_pixel_data_ry(buf_accent)
     |> display_update_sequence()
     |> trigger_display_update()
-    |> wait_before_sleep()
+    |> sleep(50)
+    |> await_device()
     |> deep_sleep()
 
     :ok
   end
 
+  #
+  # "routines" and serial commands
+  #
+
   defp reset(state) do
-    io_call(state, :handle_reset, [0])
-    io_call(state, :handle_sleep, [100])
-    io_call(state, :handle_reset, [1])
-    io_call(state, :handle_sleep, [100])
     state
-  end
-
-  # SPI commands
-
-  defp wait_before_sleep(state) do
-    io_call(state, :handle_sleep, [50])
-    await_device(state)
-  end
-
-  defp await_device(state) do
-    should_wait = io_call(state, :handle_read_busy) == 1
-
-    if should_wait do
-      io_call(state, :handle_sleep, [10])
-      await_device(state)
-    else
-      state
-    end
+    |> set_reset(0)
+    |> sleep(100)
+    |> set_reset(1)
+    |> sleep(100)
   end
 
   defp soft_reset(state), do: write_command(state, 0x12)
@@ -116,13 +126,13 @@ defmodule Inky.Commands do
     |> write_command(0x45, height_data)
   end
 
-  defp push_pixel_data(state, buffer_black, buffer_accent) do
-    # 0x24 == RAM B/W
-    do_push_pixel_data(state, 0x24, buffer_black)
-    # 0x26 == RAM Red/Yellow/etc
-    do_push_pixel_data(state, 0x26, buffer_accent)
-    state
-  end
+  # 0x24 == RAM B/W
+  defp push_pixel_data_bw(state, buffer_black),
+    do: do_push_pixel_data(state, 0x24, buffer_black)
+
+  # 0x26 == RAM Red/Yellow/etc
+  defp push_pixel_data_ry(state, buffer_accent),
+    do: do_push_pixel_data(state, 0x26, buffer_accent)
 
   defp do_push_pixel_data(state, pixel_cmd, pixel_buffer) do
     # Set RAM X Pointer start
@@ -137,7 +147,38 @@ defmodule Inky.Commands do
   defp trigger_display_update(state), do: write_command(state, 0x20)
   defp deep_sleep(state), do: write_command(state, 0x10, 0x01)
 
+  #
+  # waiting
+  #
+
+  defp await_device(state) do
+    case read_busy(state) do
+      1 ->
+        sleep(state, 10)
+        await_device(state)
+
+      0 ->
+        state
+    end
+  end
+
+  #
   # pipe-able wrappers
+  #
+
+  defp sleep(state, sleep_time) do
+    io_call(state, :handle_sleep, [sleep_time])
+    state
+  end
+
+  defp set_reset(state, value) do
+    io_call(state, :handle_reset, [value])
+    state
+  end
+
+  defp read_busy(state) do
+    io_call(state, :handle_read_busy)
+  end
 
   defp write_command(state, command) do
     io_call(state, :handle_command, [command])
@@ -148,6 +189,10 @@ defmodule Inky.Commands do
     io_call(state, :handle_command, [command, data])
     state
   end
+
+  #
+  # Behaviour dispatching
+  #
 
   # Dispatch to the IO callback module that's held in state, using the previously obtained state
   defp io_call(state, op, args \\ []) do
