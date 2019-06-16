@@ -1,7 +1,10 @@
 defmodule Inky.CommandsTest do
+  @moduledoc false
+
   use ExUnit.Case
 
   alias Inky.Commands
+  alias Inky.Displays.Display
   alias Inky.TestIO
 
   import Inky.TestUtil, only: [gather_messages: 0, pos2col: 2]
@@ -15,13 +18,14 @@ defmodule Inky.CommandsTest do
   end
 
   setup_all do
-    display = Inky.Displays.Display.spec_for(:phat)
+    display = %Display{width: w, height: h, rotation: r} = Display.spec_for(:phat)
     pixels = init_pixels(display)
 
     %{
       display: display,
-      buf_black: Inky.PixelUtil.pixels_to_bitstring(pixels, display, :black),
-      buf_red: Inky.PixelUtil.pixels_to_bitstring(pixels, display, :red)
+      buf_black: Inky.PixelUtil.pixels_to_bits(pixels, w, h, r, %{black: 0, miss: 1}),
+      buf_red:
+        Inky.PixelUtil.pixels_to_bits(pixels, w, h, r, %{red: 1, yellow: 1, accent: 1, miss: 0})
     }
   end
 

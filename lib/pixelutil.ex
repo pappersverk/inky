@@ -3,51 +3,72 @@ defmodule Inky.PixelUtil do
   `PixelUtil` maps pixels to bitstrings to be sent to an Inky screen
   """
 
-  def pixels_to_bitstring(pixels, display, color) do
-    rotation = display.rotation / 90
-    width = display.width
-    height = display.height
+  def pixels_to_bits(pixels, width, height, rotation_degrees, color_map) do
+    {outer_axis, dimension_vectors} =
+      rotation_degrees
+      |> normalised_rotation()
+      |> rotation_opts()
 
-    p2b =
-      case color do
-        :black -> &pixel_to_black/1
-        _ -> &pixel_to_accent/1
-      end
-
-    opts = bitstring_traversal_opts(rotation, width, height)
-    do_pixels_to_bitstring(pixels, p2b, opts)
+    dimension_vectors
+    |> rotated_ranges(width, height)
+    |> do_pixels_to_bits(
+      &pixels[pixel_key(outer_axis, &1, &2)],
+      &(color_map[&1] || color_map.miss)
+    )
   end
 
-  defp pixel_to_black(:black), do: 0
-  defp pixel_to_black(_), do: 1
+  @doc """
+  Only exposed for testing purposes. Do not use.
 
-  defp pixel_to_accent(c) when c in [:red, :yellow, :accent], do: 1
-  defp pixel_to_accent(_), do: 0
+      iex> Enum.map(
+      ...>     [-360, -270, -180, -90, 0, 90, 180, 270, 360, 450],
+      ...>     &Inky.PixelUtil.normalised_rotation/1
+      ...> )
+      [0, 1, 2, 3, 0, 1, 2, 3, 0, 1]
+  """
+  def normalised_rotation(degrees) do
+    # Check that normalisation works and wraps correctly
+    r = degrees |> div(90) |> rem(4)
+    if(r < 0, do: r + 4, else: r)
+  end
 
-  defp bitstring_traversal_opts(rotation, width, height) do
-    w_n = width - 1
-    h_n = height - 1
+  @doc """
+  Only exposed for testing purposes. Do not use.
 
+      iex> Enum.map([3, 1, 2, 0], &Inky.PixelUtil.rotation_opts/1)
+      [{:x, {{:x, -1}, {:y, 1}}},
+       {:x, {{:x, 1}, {:y, -1}}},
+       {:y, {{:y, -1}, {:x, -1}}},
+       {:y, {{:y, 1}, {:x, 1}}}]
+  """
+  def rotation_opts(rotation) do
     case rotation do
-      -1.0 -> {:x_outer, w_n, 0, 0, h_n}
-      1.0 -> {:x_outer, 0, w_n, h_n, 0}
-      -2.0 -> {:y_outer, h_n, 0, w_n, 0}
-      _ -> {:y_outer, 0, h_n, 0, w_n}
+      3 -> {:x, {{:x, -1}, {:y, 1}}}
+      1 -> {:x, {{:x, 1}, {:y, -1}}}
+      2 -> {:y, {{:y, -1}, {:x, -1}}}
+      0 -> {:y, {{:y, 1}, {:x, 1}}}
     end
   end
 
-  defp do_pixels_to_bitstring(pixels, p2b, {order, i_1, i_n, j_1, j_n}) do
-    for i <- i_1..i_n,
-        j <- j_1..j_n,
-        do: <<pixel_value(pixels, p2b, order, i, j)::size(1)>>,
+  defp rotated_ranges({i_spec, j_spec}, i_n, j_m) do
+    {
+      rotated_dimension(i_n, j_m, i_spec),
+      rotated_dimension(i_n, j_m, j_spec)
+    }
+  end
+
+  defp rotated_dimension(width, _height, {:x, 1}), do: 0..(width - 1)
+  defp rotated_dimension(width, _height, {:x, -1}), do: (width - 1)..0
+  defp rotated_dimension(_width, height, {:y, 1}), do: 0..(height - 1)
+  defp rotated_dimension(_width, height, {:y, -1}), do: (height - 1)..0
+
+  defp do_pixels_to_bits({i_range, j_range}, pixel_picker, cmap) do
+    for i <- i_range,
+        j <- j_range,
+        do: <<cmap.(pixel_picker.(i, j))::size(1)>>,
         into: <<>>
   end
 
-  defp pixel_value(pixels, p2b, order, i, j) do
-    key = pixel_key(order, i, j)
-    p2b.(pixels[key])
-  end
-
-  defp pixel_key(:x_outer, i, j), do: {i, j}
-  defp pixel_key(:y_outer, i, j), do: {j, i}
+  defp pixel_key(:x, i, j), do: {i, j}
+  defp pixel_key(:y, i, j), do: {j, i}
 end

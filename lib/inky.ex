@@ -4,11 +4,7 @@ defmodule Inky do
   """
 
   defmodule State do
-    @moduledoc """
-    The State struct is used throughout the inky library to provide a structure
-    for the different pieces of data required to run the display.
-    """
-
+    @moduledoc false
     @enforce_keys [:display, :hal_state]
     defstruct type: nil,
               hal_state: nil,
@@ -21,6 +17,11 @@ defmodule Inky do
   alias Inky.Commands
   alias Inky.Displays.Display
   alias Inky.PixelUtil
+
+  @color_map_black %{black: 0, miss: 1}
+  @color_map_accent %{red: 1, yellow: 1, accent: 1, miss: 0}
+
+  # API
 
   @doc """
   Initializes a display of the given configuration. This function will do some
@@ -50,12 +51,12 @@ defmodule Inky do
 
     # Note: Rotation handled when converting to bitstring
     pixels = state.pixels
-    display = state.display
+    display = %Display{width: w, height: h, rotation: r} = state.display
 
-    black_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :black)
-    accent_bytes = PixelUtil.pixels_to_bitstring(pixels, display, :accent)
+    black_bits = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map_black)
+    accent_bits = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map_accent)
 
-    Commands.update(state.hal_state, display, black_bytes, accent_bytes)
+    Commands.update(state.hal_state, display, black_bits, accent_bits)
     state
   end
 end
