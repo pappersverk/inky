@@ -26,9 +26,9 @@ jobs:
             - v1-mix-cache
 
       - restore_cache:  # restores saved build cache
-        keys:
-          - v1-build-cache-{{ .Branch }}
-          - v1-build-cache
+          keys:
+            - v1-build-cache-{{ .Branch }}
+            - v1-build-cache
 
       - run: mix do deps.get, compile  # get updated dependencies & compile them
 
