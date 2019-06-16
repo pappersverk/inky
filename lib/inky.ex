@@ -45,17 +45,32 @@ defmodule Inky do
   end
 
   @doc """
-  `set_pixels(pid | name, pixels | painter, opts \\ %{push: :await})` set pixels and draw to display (or not!), with data or a painter function.
+  `set_pixels(pid | name, pixels | painter, opts \\ %{push: :await})` set
+  pixels and draw to display (or not!), with data or a painter function.
 
-  set_pixels updates the internal state either with specific pixels or by calling `painter.(x,y)` for all points in the screen, in an undefined order. Currently, `set_pixels` only accepts a `:push` option with one of the following values, but whichever you use, the internal state will be updated.
+  set_pixels updates the internal state either with specific pixels or by
+  calling `painter.(x,y,w,h,current_pixels)` for all points in the screen, in
+  an undefined order.
 
-  Valid `:push` values are:
+  Currently, the only option checked is `:push`, which represents the minimum
+  pixel pushing policy the caller wishes to apply for their request. Valid
+  values are listed and explained below.
 
-  - `:await`: Busy wait until you can push to display. This is the default.
-  - `:once`: Push to the display if it is not busy, otherwise, report that it was busy. If there has been a timeout previously set, but that has yet to fire, it will be set again.
-  - `{:timeout, :await}`: Use genserver timeouts to avoid multiple updates. When the timeout triggers, await device with a busy wait and then push to the display.
-  - `{:timeout, :once}`: Use genserver timeouts to avoid multiple updates. When the timeout triggers, update the display if not busy.
-  - `:skip`: Do not push to display. If there has been a timeout previously set, but that has yet to fire, it will be set again.
+  NOTE: the internal state of Inky will still be updated, regardless of which
+  pushing policy is employed.
+
+  - `:await`: Busy wait until you can push to display, clearing any previously
+    set timeout. This is the default.
+  - `:once`: Push to the display if it is not busy, otherwise, report that it
+    was busy. Only `:await` timeouts are reset if a `:once` push has failed.
+  - `{:timeout, :await}`: Use genserver timeouts to avoid multiple updates.
+    When the timeout triggers, await device with a busy wait and then push to
+    the display. If the timeout previously was :once, it is replaced.
+  - `{:timeout, :once}`: Use genserver timeouts to avoid multiple updates. When
+    the timeout triggers, update the display if not busy. Does not downgrade a
+    previously set `:await` timeout.
+  - `:skip`: Do not push to display. If there has been a timeout previously
+    set, but that has yet to fire, it will remain set.
   """
   def set_pixels(pid, arg, opts \\ %{push: :await}),
     do: GenServer.call(pid, {:set_pixels, arg, opts}, :infinity)
