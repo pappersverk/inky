@@ -6,14 +6,16 @@ This is a library that is capable of setting pixels and updating the Inky PHAT a
 
 Check out testrun.exs for some simple examples.
 
-It currently only runs on-device aside from the testing.
+It currently only runs on-device aside from the testing. The inky_host_dev library is underway for allowing host-side development.
+
+A basic driver for scenic is in the works. Check it out at https://github.com/pappersverk/scenic_driver_inky
 
 ## Getting started
 
-Add inky to your mix.exs, we will try to get in on that sweet hex action eventually:
+Inky is available on Hex. Add inky to your mix.exs deps:
 
 ```elixir
-{:inky, github: "lawik/inky"}
+{:inky, "~> 0.0.1"},
 ```
 
 Run `mix deps.get` to get the new dep.
@@ -27,24 +29,17 @@ state = Inky.init(:phat, :red)
 state =
   Enum.reduce(0..(state.display.height - 1), state, fn y, state ->
     Enum.reduce(0..(state.display.width - 1), state, fn x, state ->
-      color = cond do
-        x > state.display.width / 2 ->
-          cond do
-            y > state.display.height / 2 -> :red
-            true ->
-              cond do
-                rem(x, 2) == 0 -> :white
-                true -> :black
-              end
-          end
-        true -> 
-          cond do
-            y > state.display.height / 2 ->
-              :black
-            true ->
-              :white
-          end
-      end
+      x_big = x > width / 2
+      y_big = y > height / 2
+
+      color =
+        case {x_big, y_big} do
+          {true, true} -> :accent
+          {true, false} when rem(x, 2) == 0 -> :white
+          {true, false} -> :black
+          {false, true} -> :black
+          {false, false} -> :white
+        end
       Inky.set_pixel(state, x, y, color)
     end)
   end)
