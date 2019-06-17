@@ -75,7 +75,7 @@ defmodule Inky.Host.Canvas do
       case accent do
         :red -> {255, 0, 0}
         :yellow -> {255, 255, 0}
-        _ -> {255, 0, 0}
+        _ -> {0, 255, 0}
       end
 
     brushes = %{

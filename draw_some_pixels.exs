@@ -18,17 +18,32 @@ defmodule Script do
     pixels =
       Enum.reduce(0..(height - 1), %{}, fn y, pixels ->
         Enum.reduce(0..(width - 1), pixels, fn x, pixels ->
-
-          x_big = x > width / 2
-          y_big = y > height / 2
-
+          # color = cond do
+          #   rem(x, 2) == 0 -> :black
+          #   true -> :white
+          # end
           color =
-            case {x_big, y_big} do
-              {true, true} -> :accent
-              {true, false} when rem(x, 2) == 0 -> :white
-              {true, false} -> :black
-              {false, true} -> :black
-              {false, false} -> :white
+            cond do
+              x > width / 2 ->
+                cond do
+                  y > height / 2 ->
+                    :accent
+
+                  true ->
+                    cond do
+                      rem(x, 2) == 0 -> :white
+                      true -> :black
+                    end
+                end
+
+              true ->
+                cond do
+                  y > height / 2 ->
+                    :black
+
+                  true ->
+                    :white
+                end
             end
 
           put_in(pixels, [{x, y}], color)
