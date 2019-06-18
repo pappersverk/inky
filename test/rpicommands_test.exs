@@ -1,10 +1,10 @@
-defmodule Inky.CommandsTest do
+defmodule Inky.RpiCommandsTest do
   @moduledoc false
 
   use ExUnit.Case
 
-  alias Inky.Commands
   alias Inky.Displays.Display
+  alias Inky.RpiCommands
   alias Inky.TestIO
 
   import Inky.TestUtil, only: [gather_messages: 0, pos2col: 2]
@@ -32,7 +32,7 @@ defmodule Inky.CommandsTest do
   describe "happy paths" do
     test "that init dispatches properly" do
       # act
-      Commands.init_io(TestIO, [])
+      RpiCommands.init(TestIO, [])
 
       # assert
       assert_received {:init, []}
@@ -43,10 +43,10 @@ defmodule Inky.CommandsTest do
     test "that update dispatches properly when the device is never busy", ctx do
       # arrange, read_busy always returns 0
       init_opts = [read_busy: 0]
-      state = Commands.init_io(TestIO, init_opts)
+      state = RpiCommands.init(TestIO, init_opts)
 
       # act
-      :ok = Commands.update(state, ctx.display, ctx.buf_black, ctx.buf_red)
+      :ok = RpiCommands.handle_update(ctx.display, ctx.buf_black, ctx.buf_red, :await, state)
 
       # assert
       assert_received {:init, init_opts}
@@ -61,10 +61,10 @@ defmodule Inky.CommandsTest do
     test "that update dispatches properly when the device is a little busy", ctx do
       # arrange, read_busy is a little busy each time, we expect two wait-loops.
       init_opts = [read_busy: [1, 1, 1, 0, 1, 1, 0]]
-      state = Commands.init_io(TestIO, init_opts)
+      state = RpiCommands.init(TestIO, init_opts)
 
       # act
-      :ok = Commands.update(state, ctx.display, ctx.buf_black, ctx.buf_red)
+      :ok = RpiCommands.handle_update(ctx.display, ctx.buf_black, ctx.buf_red, :await, state)
 
       # assert
       assert_received {:init, init_opts}

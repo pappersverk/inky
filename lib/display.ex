@@ -41,6 +41,18 @@ defmodule Inky.Displays.Display do
     }
   end
 
+  def spec_for(type = :test_small, accent) do
+    %__MODULE__{
+      type: type,
+      width: 3,
+      height: 4,
+      packed_dimensions: packed_dimensions(type, 3, 4),
+      rotation: 270,
+      accent: accent,
+      luts: "luts"
+    }
+  end
+
   defp packed_dimensions(type, width, height),
     do: %{
       width: packed_width(type, width, height),
@@ -52,6 +64,7 @@ defmodule Inky.Displays.Display do
       case type do
         :what -> width
         :phat -> height
+        :test_small -> height
       end
 
     <<trunc(columns / 8) - 1>>
@@ -62,6 +75,7 @@ defmodule Inky.Displays.Display do
       case type do
         :what -> height
         :phat -> width
+        :test_small -> width
       end
 
     # Little endian, unsigned short

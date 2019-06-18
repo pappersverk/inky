@@ -1,5 +1,9 @@
 defmodule Inky.TestVerifier do
+  @moduledoc false
+
   defmodule MockInteractionException do
+    @moduledoc false
+
     defexception message: "Interaction with mock did not match expectation.",
                  description: nil,
                  issue: nil,

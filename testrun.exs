@@ -15,8 +15,11 @@ end)
 
 painter = fn x, y, w, h, pxs ->
   cond do
+    x < w / 3 and (rem(y, 2) == 0 or rem(x, 2) == 1) -> :black
     x < w / 3 -> :white
-    x < w / 3 * 2 -> :black
+    x < w / 3 * 2 and (rem(y, 2) == 0 or rem(x, 2) == 1) -> :black
+    x < w / 3 * 2 -> :red
+    rem(y, 2) == 0 or rem(x, 2) == 1 -> :white
     true -> :red
   end
 end

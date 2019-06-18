@@ -5,6 +5,18 @@ defmodule Inky do
 
   use GenServer
 
+  require Integer
+  require Logger
+
+  alias Inky.Displays.Display
+  alias Inky.PixelUtil
+  alias Inky.RpiCommands
+
+  @push_timeout 5000
+
+  @color_map_black %{black: 0, miss: 1}
+  @color_map_accent %{red: 1, yellow: 1, accent: 1, miss: 0}
+
   defmodule State do
     @moduledoc false
     @enforce_keys [:display, :hal_state]
@@ -12,27 +24,16 @@ defmodule Inky do
               hal_state: nil,
               display: nil,
               wait_type: :nowait,
-              pixels: %{}
+              pixels: %{},
+              command_mod: RpiCommands
   end
-
-  require Integer
-  require Logger
-
-  alias Inky.Commands
-  alias Inky.Displays.Display
-  alias Inky.PixelUtil
-
-  @push_timeout 5000
-
-  @color_map_black %{black: 0, miss: 1}
-  @color_map_accent %{red: 1, yellow: 1, accent: 1, miss: 0}
 
   #
   # API
   #
 
   @doc """
-  Start a GenServer that deals with the HAL state (initialization of and communication with the display) and pushing pixels to the physical display. This function will do some of the necessary preparation to prepare communication with the display.
+  Start a GenServer that deals with the HAL state (initialization of and communication with the display) and pushing pixels to the physical display. This function will do some of the necessary preparation to enable communication with the display.
 
   ## Parameters
 
@@ -72,14 +73,17 @@ defmodule Inky do
   - `:skip`: Do not push to display. If there has been a timeout previously
     set, but that has yet to fire, it will remain set.
   """
-  def set_pixels(pid, arg, opts \\ %{push: :await}),
+  def set_pixels(pid, arg, opts \\ %{}),
     do: GenServer.call(pid, {:set_pixels, arg, opts}, :infinity)
 
-  # TODO: rename to push?
   def show(server, opts \\ %{}) do
     if opts[:async] === true,
       do: GenServer.cast(server, :push),
       else: GenServer.call(server, :push, :infinity)
+  end
+
+  def stop(server) do
+    GenServer.stop(server)
   end
 
   #
@@ -90,11 +94,17 @@ defmodule Inky do
   def init(args) do
     type = args[:type]
     accent = args[:accent]
+    command_mod = args[:command_mod] || RpiCommands
 
     display = Display.spec_for(type, accent)
-    hal_state = Commands.init_io()
+    hal_state = command_mod.init()
 
-    {:ok, %State{display: display, hal_state: hal_state}}
+    {:ok,
+     %State{
+       command_mod: command_mod,
+       display: display,
+       hal_state: hal_state
+     }}
   end
 
   # GenServer calls
@@ -102,7 +112,7 @@ defmodule Inky do
   @impl GenServer
   def handle_call({:set_pixels, arg, opts}, _from, state) do
     state = %State{state | pixels: update_pixels(arg, state)}
-    dispatch_push(opts[:push], state)
+    dispatch_push(opts[:push] || :await, state)
   end
 
   def handle_call(:push, _from, state) do
@@ -118,7 +128,7 @@ defmodule Inky do
 
   @impl GenServer
   def handle_cast(:push, state) do
-    push(state, :await)
+    push(:await, state)
     {:noreply, state}
   end
 
@@ -223,12 +233,12 @@ defmodule Inky do
 
   # Internals
 
-  defp push(push_policy, state) do
+  defp push(push_policy, state = %State{command_mod: cm}) do
     display = %Display{width: w, height: h, rotation: r} = state.display
 
     black_bits = PixelUtil.pixels_to_bits(state.pixels, w, h, r, @color_map_black)
     accent_bits = PixelUtil.pixels_to_bits(state.pixels, w, h, r, @color_map_accent)
 
-    Commands.update(state.hal_state, display, black_bits, accent_bits, push_policy)
+    cm.handle_update(display, black_bits, accent_bits, push_policy, state.hal_state)
   end
 end

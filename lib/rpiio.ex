@@ -3,6 +3,7 @@ defmodule Inky.RpiIO do
   An InkyIO implementation intended for use with raspberry pis and relies on
   Circuits.GPIO and Cirtuits.SPI.
   """
+
   @behaviour Inky.InkyIO
 
   alias Circuits.GPIO
