@@ -92,12 +92,16 @@ defmodule Inky do
 
   @impl GenServer
   def init(args) do
-    type = args[:type]
-    accent = args[:accent]
+    type = Map.fetch!(args, :type)
+    accent = Map.fetch!(args, :accent)
     command_mod = args[:command_mod] || RpiCommands
 
     display = Display.spec_for(type, accent)
-    hal_state = command_mod.init()
+
+    hal_state =
+      command_mod.init(%{
+        display: display
+      })
 
     {:ok,
      %State{

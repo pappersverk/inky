@@ -5,7 +5,7 @@ defmodule Inky.Commands do
 
   @type io_state :: any()
 
-  @callback init(module(), any()) :: io_state()
+  @callback init(map()) :: io_state()
   @callback handle_update(
               Inky.Displays.Display.t(),
               binary(),

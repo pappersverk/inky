@@ -30,9 +30,13 @@ defmodule Inky.RpiCommandsTest do
   end
 
   describe "happy paths" do
-    test "that init dispatches properly" do
+    test "that init dispatches properly", ctx do
       # act
-      RpiCommands.init(TestIO, [])
+      RpiCommands.init(%{
+        display: ctx.display,
+        io_args: [],
+        io_mod: TestIO
+      })
 
       # assert
       assert_received {:init, []}
@@ -42,14 +46,21 @@ defmodule Inky.RpiCommandsTest do
     @tag timeout: 5
     test "that update dispatches properly when the device is never busy", ctx do
       # arrange, read_busy always returns 0
-      init_opts = [read_busy: 0]
-      state = RpiCommands.init(TestIO, init_opts)
+      init_args = %{
+        display: ctx.display,
+        io_args: [
+          read_busy: 0
+        ],
+        io_mod: TestIO
+      }
+
+      state = RpiCommands.init(init_args)
 
       # act
       :ok = RpiCommands.handle_update(ctx.display, ctx.buf_black, ctx.buf_red, :await, state)
 
       # assert
-      assert_received {:init, init_opts}
+      assert_received {:init, init_args}
       assert TestIO.assert_expectations() == :ok
       spec = load_spec("data/success1.dat", __DIR__)
       mailbox = gather_messages()
@@ -60,14 +71,21 @@ defmodule Inky.RpiCommandsTest do
     @tag timeout: 5
     test "that update dispatches properly when the device is a little busy", ctx do
       # arrange, read_busy is a little busy each time, we expect two wait-loops.
-      init_opts = [read_busy: [1, 1, 1, 0, 1, 1, 0]]
-      state = RpiCommands.init(TestIO, init_opts)
+      init_args = %{
+        display: ctx.display,
+        io_args: [
+          read_busy: [1, 1, 1, 0, 1, 1, 0]
+        ],
+        io_mod: TestIO
+      }
+
+      state = RpiCommands.init(init_args)
 
       # act
       :ok = RpiCommands.handle_update(ctx.display, ctx.buf_black, ctx.buf_red, :await, state)
 
       # assert
-      assert_received {:init, init_opts}
+      assert_received {:init, init_args}
       assert TestIO.assert_expectations() == :ok
       spec = load_spec("data/success2.dat", __DIR__)
       mailbox = gather_messages()

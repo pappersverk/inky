@@ -6,8 +6,6 @@ defmodule Inky.TestCommands do
   """
   @behaviour Commands
 
-  alias Inky.TestIO
-
   def assert_expectations() do
     case Process.get(:update, :not_set) do
       [] -> :ok
@@ -18,7 +16,7 @@ defmodule Inky.TestCommands do
   end
 
   @impl Commands
-  def init(_cm \\ TestIO, _cm_args \\ []) do
+  def init(_args) do
     send(:init)
     %{}
   end

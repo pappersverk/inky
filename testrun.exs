@@ -1,7 +1,9 @@
 # inspiration for what to do once you have a nerves app with Inky as a dependency :)
 {:ok, pid} = Inky.start_link(%{type: :phat, accent: :red})
 
-Inky.set_pixels(pid, fn x, y, w, h, _pixels_so_far ->
+pid = Process.whereis(InkySample)
+
+painter = fn x, y, w, h, _pixels_so_far ->
   wh = w / 2
   hh = h / 2
 
@@ -11,7 +13,9 @@ Inky.set_pixels(pid, fn x, y, w, h, _pixels_so_far ->
     {true, false} -> :black
     {false, false} -> :white
   end
-end)
+end
+
+Inky.set_pixels(pid, painter)
 
 painter = fn x, y, w, h, pxs ->
   cond do

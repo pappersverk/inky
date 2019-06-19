@@ -13,7 +13,7 @@ defmodule Inky.RpiCommands do
   defmodule State do
     @moduledoc false
 
-    @state_fields [:io_mod, :io_state]
+    @state_fields [:display, :io_mod, :io_state]
 
     @enforce_keys @state_fields
     defstruct @state_fields
@@ -24,12 +24,21 @@ defmodule Inky.RpiCommands do
   #
 
   @impl Commands
-  def init(io_mod \\ @default_io_mod, io_args \\ []) do
-    %State{io_mod: io_mod, io_state: io_mod.init(io_args)}
+  def init(args) do
+    display = Map.fetch!(args, :display)
+    io_mod = args[:io_mod] || @default_io_mod
+    io_args = args[:io_args] || []
+
+    %State{
+      display: display,
+      io_mod: io_mod,
+      io_state: io_mod.init(io_args)
+    }
   end
 
   @impl Commands
-  def handle_update(display, buf_black, buf_accent, push_policy, state = %State{}) do
+  def handle_update(_display, buf_black, buf_accent, push_policy, state = %State{}) do
+    display = state.display
     reset(state)
     soft_reset(state)
 
