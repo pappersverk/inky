@@ -18,14 +18,12 @@ defmodule Inky.RpiCommandsTest do
   end
 
   setup_all do
-    display = %Display{width: w, height: h, rotation: r} = Display.spec_for(:phat)
+    display = Display.spec_for(:phat)
     pixels = init_pixels(display)
 
     %{
       display: display,
-      buf_black: Inky.PixelUtil.pixels_to_bits(pixels, w, h, r, %{black: 0, miss: 1}),
-      buf_red:
-        Inky.PixelUtil.pixels_to_bits(pixels, w, h, r, %{red: 1, yellow: 1, accent: 1, miss: 0})
+      pixels: pixels
     }
   end
 
@@ -42,8 +40,6 @@ defmodule Inky.RpiCommandsTest do
       assert_received {:init, []}
     end
 
-    # fail fast, just in case we have an infinite loop bug
-    @tag timeout: 5
     test "that update dispatches properly when the device is never busy", ctx do
       # arrange, read_busy always returns 0
       init_args = %{
@@ -57,7 +53,7 @@ defmodule Inky.RpiCommandsTest do
       state = RpiCommands.init(init_args)
 
       # act
-      :ok = RpiCommands.handle_update(ctx.display, ctx.buf_black, ctx.buf_red, :await, state)
+      :ok = RpiCommands.handle_update(ctx.pixels, :await, state)
 
       # assert
       assert_received {:init, init_args}
@@ -67,8 +63,6 @@ defmodule Inky.RpiCommandsTest do
       assert check(spec, mailbox) == {:ok, 31}
     end
 
-    # fail fast, just in case we have an infinite loop bug
-    @tag timeout: 5
     test "that update dispatches properly when the device is a little busy", ctx do
       # arrange, read_busy is a little busy each time, we expect two wait-loops.
       init_args = %{
@@ -82,7 +76,7 @@ defmodule Inky.RpiCommandsTest do
       state = RpiCommands.init(init_args)
 
       # act
-      :ok = RpiCommands.handle_update(ctx.display, ctx.buf_black, ctx.buf_red, :await, state)
+      :ok = RpiCommands.handle_update(ctx.pixels, :await, state)
 
       # assert
       assert_received {:init, init_args}

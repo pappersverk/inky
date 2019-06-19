@@ -1,3 +1,4 @@
+# TODO: rename to RpiHAL and propagate where necessary
 defmodule Inky.RpiCommands do
   @moduledoc """
   `Commands` is responsible for sending commands to the Inky screen. It delegates
@@ -7,8 +8,12 @@ defmodule Inky.RpiCommands do
   @behaviour Inky.Commands
 
   @default_io_mod Inky.RpiIO
+  @color_map_black %{black: 0, miss: 1}
+  @color_map_accent %{red: 1, yellow: 1, accent: 1, miss: 0}
 
   alias Inky.Commands
+  alias Inky.Displays.Display
+  alias Inky.PixelUtil
 
   defmodule State do
     @moduledoc false
@@ -37,13 +42,16 @@ defmodule Inky.RpiCommands do
   end
 
   @impl Commands
-  def handle_update(_display, buf_black, buf_accent, push_policy, state = %State{}) do
-    display = state.display
+  def handle_update(pixels, push_policy, state = %State{}) do
+    display = %Display{width: w, height: h, rotation: r} = state.display
+    black_bits = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map_black)
+    accent_bits = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map_accent)
+
     reset(state)
     soft_reset(state)
 
     case pre_update(state, push_policy) do
-      :cont -> do_update(state, display, buf_black, buf_accent)
+      :cont -> do_update(state, display, black_bits, accent_bits)
       :halt -> {:error, :device_busy}
     end
   end

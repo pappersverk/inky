@@ -9,13 +9,9 @@ defmodule Inky do
   require Logger
 
   alias Inky.Displays.Display
-  alias Inky.PixelUtil
   alias Inky.RpiCommands
 
   @push_timeout 5000
-
-  @color_map_black %{black: 0, miss: 1}
-  @color_map_accent %{red: 1, yellow: 1, accent: 1, miss: 0}
 
   defmodule State do
     @moduledoc false
@@ -25,7 +21,7 @@ defmodule Inky do
               display: nil,
               wait_type: :nowait,
               pixels: %{},
-              command_mod: RpiCommands
+              hal_mod: RpiCommands
   end
 
   #
@@ -94,18 +90,18 @@ defmodule Inky do
   def init(args) do
     type = Map.fetch!(args, :type)
     accent = Map.fetch!(args, :accent)
-    command_mod = args[:command_mod] || RpiCommands
+    hal_mod = args[:hal_mod] || RpiCommands
 
     display = Display.spec_for(type, accent)
 
     hal_state =
-      command_mod.init(%{
+      hal_mod.init(%{
         display: display
       })
 
     {:ok,
      %State{
-       command_mod: command_mod,
+       hal_mod: hal_mod,
        display: display,
        hal_state: hal_state
      }}
@@ -237,12 +233,8 @@ defmodule Inky do
 
   # Internals
 
-  defp push(push_policy, state = %State{command_mod: cm}) do
-    display = %Display{width: w, height: h, rotation: r} = state.display
-
-    black_bits = PixelUtil.pixels_to_bits(state.pixels, w, h, r, @color_map_black)
-    accent_bits = PixelUtil.pixels_to_bits(state.pixels, w, h, r, @color_map_accent)
-
-    cm.handle_update(display, black_bits, accent_bits, push_policy, state.hal_state)
+  defp push(push_policy, state) do
+    hm = state.hal_mod
+    hm.handle_update(state.pixels, push_policy, state.hal_state)
   end
 end

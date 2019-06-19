@@ -1,3 +1,4 @@
+# TODO: rename file to testhal.exs
 Code.require_file("test/support/testcommands.exs")
 
 defmodule Inky.InkyTest do
@@ -5,7 +6,8 @@ defmodule Inky.InkyTest do
 
   use ExUnit.Case
 
-  alias Inky.TestCommands
+  # TODO: rename TestCommands to TestHAL
+  alias Inky.TestCommands, as: TestHAL
 
   doctest Inky
 
@@ -13,7 +15,7 @@ defmodule Inky.InkyTest do
     %{
       init_args: %{
         accent: :red,
-        command_mod: TestCommands,
+        hal_mod: TestHAL,
         type: :test_small
       }
     }
@@ -23,26 +25,26 @@ defmodule Inky.InkyTest do
     test "init()", ctx do
       {:ok, _state} = Inky.init(ctx.init_args)
 
-      assert_received :init
+      assert_received {TestHAL, :init}
     end
   end
 
   describe "Inky updates" do
     test "update pixel data when empty", ctx do
       {:ok, state} = Inky.init(ctx.init_args)
-      assert_received :init
+      assert_received {TestHAL, :init}
 
       Process.put(:update, :ok)
       pixels = %{{0, 0} => :black, {2, 3} => :red}
       {:reply, :ok, state} = Inky.handle_call({:set_pixels, pixels, %{}}, self(), state)
 
-      TestCommands.assert_expectations()
+      TestHAL.assert_expectations()
       assert state.pixels == pixels
     end
 
     test "update pixel data when already set", ctx do
       {:ok, state} = Inky.init(ctx.init_args)
-      assert_received :init
+      assert_received {TestHAL, :init}
 
       Process.put(:update, :ok)
       pixels = %{{0, 0} => :black, {2, 3} => :red}
@@ -50,7 +52,7 @@ defmodule Inky.InkyTest do
       pixels = %{{1, 2} => :white}
       {:reply, :ok, state} = Inky.handle_call({:set_pixels, pixels, %{}}, self(), state)
 
-      TestCommands.assert_expectations()
+      TestHAL.assert_expectations()
       assert state.pixels == %{{1, 2} => :white, {0, 0} => :black, {2, 3} => :red}
     end
 

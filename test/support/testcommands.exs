@@ -22,7 +22,7 @@ defmodule Inky.TestCommands do
   end
 
   @impl Commands
-  def handle_update(_display, _buf_black, _buf_accent, _push_policy, _state) do
+  def handle_update(_pixels, _push_policy, _state) do
     response = do_handle_update()
     do_report_response(response)
 
@@ -60,7 +60,7 @@ defmodule Inky.TestCommands do
     send({:update, msg})
   end
 
-  defp send(msg), do: Process.send(self(), msg, [])
+  defp send(msg), do: Process.send(self(), {__MODULE__, msg}, [])
 
   defp arg_err(msg), do: raise(ArgumentError, message: msg)
 end

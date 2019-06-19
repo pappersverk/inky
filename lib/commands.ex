@@ -1,3 +1,4 @@
+# TODO: rename to HAL
 defmodule Inky.Commands do
   @moduledoc """
   A behaviour for defining the command interface between Inky and an IO implementation
@@ -7,9 +8,7 @@ defmodule Inky.Commands do
 
   @callback init(map()) :: io_state()
   @callback handle_update(
-              Inky.Displays.Display.t(),
-              binary(),
-              binary(),
+              map(),
               :await | :once,
               Inky.IOCommands.State.t()
             ) ::
