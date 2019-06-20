@@ -1,6 +1,9 @@
 # inspiration for what to do once you have a nerves app with Inky as a dependency :)
+
+# Start your Inky process
 {:ok, pid} = Inky.start_link(%{type: :phat, accent: :red})
 
+# ... or find an existing one.
 pid = Process.whereis(InkySample)
 
 painter = fn x, y, w, h, _pixels_so_far ->
@@ -9,7 +12,7 @@ painter = fn x, y, w, h, _pixels_so_far ->
 
   case {x >= wh, y >= hh} do
     {true, true} -> :red
-    {false, true} -> if(rem(x, 2) == 0, do: :white, else: :black)
+    {false, true} -> if(rem(x, 2) == 0, do: :black, else: :white)
     {true, false} -> :black
     {false, false} -> :white
   end
