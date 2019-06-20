@@ -1,111 +1,44 @@
-# Striped
-state = Inky.init(:phat, :red)
+# inspiration for what to do once you have a nerves app with Inky as a dependency :)
 
-state =
-  Enum.reduce(0..(state.display.height - 1), state, fn y, state ->
-    Enum.reduce(0..(state.display.width - 1), state, fn x, state ->
-      color = cond do
-        rem(x, 2) == 0 -> :white
-        true -> :black
-      end
-      Inky.set_pixel(state, x, y, color)
-    end)
-  end)
+# Start your Inky process
+{:ok, pid} = Inky.start_link(%{type: :phat, accent: :red})
 
-state = Inky.show(state)
+# ... or find an existing one.
+pid = Process.whereis(InkySample)
 
-# Quadrants (one striped)
-state = Inky.init(:phat, :red)
+painter = fn x, y, w, h, _pixels_so_far ->
+  wh = w / 2
+  hh = h / 2
 
-state =
-  Enum.reduce(0..(state.display.height - 1), state, fn y, state ->
-    Enum.reduce(0..(state.display.width - 1), state, fn x, state ->
-      color = cond do
-        x > state.display.width / 2 ->
-          cond do
-            y > state.display.height / 2 -> :red
-            true ->
-              cond do
-                rem(x, 2) == 0 -> :white
-                true -> :black
-              end
-          end
-        true -> 
-          cond do
-            y > state.display.height / 2 ->
-              :black
-            true ->
-              :white
-          end
-      end
-      Inky.set_pixel(state, x, y, color)
-    end)
-  end)
-
-state = Inky.show(state)
-
-# Sections, colored
-
-state = Inky.init(:phat, :red)
-
-state =
-  Enum.reduce(0..(state.height - 1), state, fn y, state ->
-    Enum.reduce(0..(state.width - 1), state, fn x, state ->
-      color = state.white
-
-      if x < 32 do
-        color = state.red
-      end
-
-      if x < 16 do
-        color = state.black
-      end
-
-      # color = case x do
-      #     0 -> state.black
-      #     1 -> state.black
-      #     2 -> state.black
-      #     3 -> state.black
-      #     4 -> state.red
-      #     5 -> state.red
-      #     6 -> state.red
-      #     7 -> state.red
-      #     _ -> state.white
-      # end
-      Inky.set_pixel(state, x, y, color)
-    end)
-  end)
-
-Inky.show(state)
-
-Enum.reduce(
-  0..(state.height - 1),
-  state,
-  fn y, state ->
-    Enum.reduce(
-      0..(state.width - 1),
-      state,
-      fn x, state ->
-        IO.inspect({x, y})
-        state
-      end
-    )
+  case {x >= wh, y >= hh} do
+    {true, true} -> :red
+    {false, true} -> if(rem(x, 2) == 0, do: :black, else: :white)
+    {true, false} -> :black
+    {false, false} -> :white
   end
-)
+end
 
-grid =
-  Enum.reduce(0..(state.height - 1), "", fn y, grid ->
-    row =
-      Enum.reduce(0..(state.width - 1), "", fn x, row ->
-        color_value = Map.get(state.pixels, {x, y}, 0)
+Inky.set_pixels(pid, painter)
 
-        row <>
-          case color_value do
-            0 -> "W"
-            1 -> "B"
-            2 -> "R"
-          end
-      end)
+painter = fn x, y, w, h, pxs ->
+  cond do
+    x < w / 3 and (rem(y, 2) == 0 or rem(x, 2) == 1) -> :black
+    x < w / 3 -> :white
+    x < w / 3 * 2 and (rem(y, 2) == 0 or rem(x, 2) == 1) -> :black
+    x < w / 3 * 2 -> :red
+    rem(y, 2) == 0 or rem(x, 2) == 1 -> :white
+    true -> :red
+  end
+end
 
-    grid <> row <> "\n"
-  end)
+Inky.set_pixels(pid, painter)
+
+painter = fn x, y, w, h, _pxs ->
+  cond do
+    x == y and rem(div(x, h), 2) == 0 -> :black
+    rem(x, h) == h - y and rem(div(x, h), 2) == 1 -> :black
+    true -> :white
+  end
+end
+
+Inky.set_pixels(pid, painter)

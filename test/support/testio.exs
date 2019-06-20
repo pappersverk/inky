@@ -1,6 +1,9 @@
 alias Inky.InkyIO
 
 defmodule Inky.TestIO do
+  @moduledoc """
+  A module that implements the InkyIO behaviour for testing purposes.
+  """
   @behaviour InkyIO
 
   def assert_expectations() do

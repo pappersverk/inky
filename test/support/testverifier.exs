@@ -1,9 +1,13 @@
 defmodule Inky.TestVerifier do
+  @moduledoc false
+
   defmodule MockInteractionException do
+    @moduledoc false
+
     defexception message: "Interaction with mock did not match expectation.",
                  description: nil,
                  issue: nil,
-                 item: 0
+                 item: -1
 
     def unmet(reason, item) do
       %MockInteractionException{
@@ -43,15 +47,15 @@ defmodule Inky.TestVerifier do
         {:ok, items}
 
       {spec, []} ->
-        throw(MockInteractionException.expected(spec, items))
+        throw(MockInteractionException.expected(spec, items + 1))
 
       {[], actual} ->
-        throw(MockInteractionException.unexpected(actual, items))
+        throw(MockInteractionException.unexpected(actual, items + 1))
 
       {[s | spec_rest], [a | actual_rest]} ->
         case check_step(s, a) do
           :cont -> check(spec_rest, actual_rest, items + 1)
-          {:halt, reason} -> throw(MockInteractionException.unmet(reason, items))
+          {:halt, reason} -> throw(MockInteractionException.unmet(reason, items + 1))
         end
     end
   end

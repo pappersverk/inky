@@ -1,4 +1,4 @@
-defmodule Inky.Displays.LookupTables do
+defmodule Inky.LookupTables do
   @moduledoc """
   LookupTables are used for voltage control when updating the screen.
 
