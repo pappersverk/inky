@@ -1,13 +1,12 @@
 # TODO: rename file to testhal.exs
-Code.require_file("test/support/testcommands.exs")
+Code.require_file("test/support/testhal.exs")
 
 defmodule Inky.InkyTest do
   @moduledoc false
 
   use ExUnit.Case
 
-  # TODO: rename TestCommands to TestHAL
-  alias Inky.TestCommands, as: TestHAL
+  alias Inky.TestHAL
 
   doctest Inky
 

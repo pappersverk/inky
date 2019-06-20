@@ -1,5 +1,4 @@
-# TODO: rename to HAL
-defmodule Inky.Commands do
+defmodule Inky.HAL do
   @moduledoc """
   A behaviour for defining the command interface between Inky and an IO implementation
   """

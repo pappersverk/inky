@@ -1,10 +1,11 @@
-alias Inky.Commands
+alias Inky.HAL
 
-defmodule Inky.TestCommands do
+defmodule Inky.TestHAL do
   @moduledoc """
-  A module that implements the Commands behaviour for testing purposes.
+  A module that implements the HAL behaviour for testing purposes.
   """
-  @behaviour Commands
+
+  @behaviour HAL
 
   def assert_expectations() do
     case Process.get(:update, :not_set) do
@@ -15,13 +16,13 @@ defmodule Inky.TestCommands do
     end
   end
 
-  @impl Commands
+  @impl HAL
   def init(_args) do
     send(:init)
     %{}
   end
 
-  @impl Commands
+  @impl HAL
   def handle_update(_pixels, _push_policy, _state) do
     response = do_handle_update()
     do_report_response(response)

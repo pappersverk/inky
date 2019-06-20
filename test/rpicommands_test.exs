@@ -1,10 +1,10 @@
-defmodule Inky.RpiCommandsTest do
+defmodule Inky.RpiHALTest do
   @moduledoc false
 
   use ExUnit.Case
 
   alias Inky.Displays.Display
-  alias Inky.RpiCommands
+  alias Inky.RpiHAL
   alias Inky.TestIO
 
   import Inky.TestUtil, only: [gather_messages: 0, pos2col: 2]
@@ -30,7 +30,7 @@ defmodule Inky.RpiCommandsTest do
   describe "happy paths" do
     test "that init dispatches properly", ctx do
       # act
-      RpiCommands.init(%{
+      RpiHAL.init(%{
         display: ctx.display,
         io_args: [],
         io_mod: TestIO
@@ -50,10 +50,10 @@ defmodule Inky.RpiCommandsTest do
         io_mod: TestIO
       }
 
-      state = RpiCommands.init(init_args)
+      state = RpiHAL.init(init_args)
 
       # act
-      :ok = RpiCommands.handle_update(ctx.pixels, :await, state)
+      :ok = RpiHAL.handle_update(ctx.pixels, :await, state)
 
       # assert
       assert_received {:init, init_args}
@@ -73,10 +73,10 @@ defmodule Inky.RpiCommandsTest do
         io_mod: TestIO
       }
 
-      state = RpiCommands.init(init_args)
+      state = RpiHAL.init(init_args)
 
       # act
-      :ok = RpiCommands.handle_update(ctx.pixels, :await, state)
+      :ok = RpiHAL.handle_update(ctx.pixels, :await, state)
 
       # assert
       assert_received {:init, init_args}

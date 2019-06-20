@@ -1,18 +1,18 @@
-# TODO: rename to RpiHAL and propagate where necessary
-defmodule Inky.RpiCommands do
+defmodule Inky.RpiHAL do
+  @default_io_mod Inky.RpiIO
+
   @moduledoc """
-  `Commands` is responsible for sending commands to the Inky screen. It delegates
-  to whatever IO module its user provides at init
+  `#{inspect(__MODULE__)}` is responsible for sending commands to the Inky screen. It delegates
+  to whatever IO module its user provides at init, but defaults to #{inspect(@default_io_mod)}
   """
 
-  @behaviour Inky.Commands
+  @behaviour Inky.HAL
 
-  @default_io_mod Inky.RpiIO
   @color_map_black %{black: 0, miss: 1}
   @color_map_accent %{red: 1, yellow: 1, accent: 1, miss: 0}
 
-  alias Inky.Commands
   alias Inky.Displays.Display
+  alias Inky.HAL
   alias Inky.PixelUtil
 
   defmodule State do
@@ -28,7 +28,7 @@ defmodule Inky.RpiCommands do
   # API
   #
 
-  @impl Commands
+  @impl HAL
   def init(args) do
     display = Map.fetch!(args, :display)
     io_mod = args[:io_mod] || @default_io_mod
@@ -41,7 +41,7 @@ defmodule Inky.RpiCommands do
     }
   end
 
-  @impl Commands
+  @impl HAL
   def handle_update(pixels, push_policy, state = %State{}) do
     display = %Display{width: w, height: h, rotation: r} = state.display
     black_bits = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map_black)

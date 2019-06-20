@@ -9,19 +9,20 @@ defmodule Inky do
   require Logger
 
   alias Inky.Displays.Display
-  alias Inky.RpiCommands
+  alias Inky.RpiHAL
 
   @push_timeout 5000
 
   defmodule State do
     @moduledoc false
+
     @enforce_keys [:display, :hal_state]
-    defstruct type: nil,
+    defstruct display: nil,
+              hal_mod: RpiHAL,
               hal_state: nil,
-              display: nil,
-              wait_type: :nowait,
               pixels: %{},
-              hal_mod: RpiCommands
+              type: nil,
+              wait_type: :nowait
   end
 
   #
@@ -90,7 +91,7 @@ defmodule Inky do
   def init(args) do
     type = Map.fetch!(args, :type)
     accent = Map.fetch!(args, :accent)
-    hal_mod = args[:hal_mod] || RpiCommands
+    hal_mod = args[:hal_mod] || RpiHAL
 
     display = Display.spec_for(type, accent)
 
@@ -101,8 +102,8 @@ defmodule Inky do
 
     {:ok,
      %State{
-       hal_mod: hal_mod,
        display: display,
+       hal_mod: hal_mod,
        hal_state: hal_state
      }}
   end
