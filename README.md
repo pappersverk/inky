@@ -1,14 +1,16 @@
-# InkyZeroNerves
+# Inky
 
-[![CircleCI](https://circleci.com/gh/pappersverk/inky.svg?style=svg)](https://circleci.com/gh/pappersverk/inky)
+[![CircleCI](https://circleci.com/gh/pappersverk/inky.svg?style=svg)](https://circleci.com/gh/pappersverk/inky) [![hex.pm](https://img.shields.io/hexpm/v/inky.svg)](https://hex.pm/packages/inky)
 
-This is a library that is capable of setting pixels and updating the Inky PHAT and WHAT displays. It is a port of the python library at https://github.com/pimoroni/inky
+This is a port of Pimoroni's [python Inky library](https://github.com/pimoroni/inky) written in Elixir. This library is intended to support both Inky pHAT and wHAT, but since we only have pHATs, the wHAT support may not be fully functional.
 
-Check out testrun.exs for some simple examples.
+See the [documentation](https://hexdocs.pm/inky/api-reference.html) for details regarding how to use the functionality provided.
 
-It currently only runs on-device aside from the testing. The inky_host_dev library is underway for allowing host-side development.
+See [testrun.exs](./testrun.exs) for some simple usage examples.
 
-A basic driver for scenic is in the works. Check it out at https://github.com/pappersverk/scenic_driver_inky
+The inky_host_dev library is underway for allowing host-side development, but until that is finished you can not see results without using a physical device.
+
+A basic driver for scenic is in the works, check it out at https://github.com/pappersverk/scenic_driver_inky, to follow how it is progressing.
 
 ## Getting started
 
@@ -29,14 +31,14 @@ state = Inky.init(:phat, :red)
 state =
   Enum.reduce(0..(state.display.height - 1), state, fn y, state ->
     Enum.reduce(0..(state.display.width - 1), state, fn x, state ->
-      x_big = x > width / 2
-      y_big = y > height / 2
+      x_big = x >= width / 2
+      y_big = y >= height / 2
 
       color =
         case {x_big, y_big} do
           {true, true} -> :accent
-          {true, false} when rem(x, 2) == 0 -> :white
-          {true, false} -> :black
+          {true, false} when rem(x, 2) == 0 -> :black
+          {true, false} -> :white
           {false, true} -> :black
           {false, false} -> :white
         end
@@ -46,5 +48,3 @@ state =
 
 state = Inky.show(state)
 ```
-
-Some other variants are available in testrun.exs.
