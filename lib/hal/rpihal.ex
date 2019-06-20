@@ -11,7 +11,7 @@ defmodule Inky.RpiHAL do
   @color_map_black %{black: 0, miss: 1}
   @color_map_accent %{red: 1, yellow: 1, accent: 1, miss: 0}
 
-  alias Inky.Displays.Display
+  alias Inky.Display
   alias Inky.HAL
   alias Inky.PixelUtil
 
@@ -41,6 +41,8 @@ defmodule Inky.RpiHAL do
     }
   end
 
+  # TODO: (#6) wrap push_policy in a map under the key :push, default :await, call the map opts
+  # TODO: (#6) implement support for opts[:border] being a color, default :black
   @impl HAL
   def handle_update(pixels, push_policy, state = %State{}) do
     display = %Display{width: w, height: h, rotation: r} = state.display

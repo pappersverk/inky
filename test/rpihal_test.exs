@@ -3,7 +3,7 @@ defmodule Inky.RpiHALTest do
 
   use ExUnit.Case
 
-  alias Inky.Displays.Display
+  alias Inky.Display
   alias Inky.RpiHAL
   alias Inky.TestIO
 

@@ -7,7 +7,7 @@ painter = fn x, y, w, h, _pixels_so_far ->
   wh = w / 2
   hh = h / 2
 
-  case {x > wh, y > hh} do
+  case {x >= wh, y >= hh} do
     {true, true} -> :red
     {false, true} -> if(rem(x, 2) == 0, do: :white, else: :black)
     {true, false} -> :black
@@ -30,4 +30,12 @@ end
 
 Inky.set_pixels(pid, painter)
 
-# Inky.show(pid)
+painter = fn x, y, w, h, _pxs ->
+  cond do
+    x == y and rem(div(x, h), 2) == 0 -> :black
+    rem(x, h) == h - y and rem(div(x, h), 2) == 1 -> :black
+    true -> :white
+  end
+end
+
+Inky.set_pixels(pid, painter)

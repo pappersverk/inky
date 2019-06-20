@@ -8,7 +8,7 @@ defmodule Inky do
   require Integer
   require Logger
 
-  alias Inky.Displays.Display
+  alias Inky.Display
   alias Inky.RpiHAL
 
   @push_timeout 5000

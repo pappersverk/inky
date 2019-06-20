@@ -1,9 +1,9 @@
-defmodule Inky.Displays.Display do
+defmodule Inky.Display do
   @moduledoc """
   Display creates specifications for displays and accent colors
   """
 
-  alias Inky.Displays.LookupTables
+  alias Inky.LookupTables
 
   @enforce_keys [:type, :width, :height, :packed_dimensions, :rotation, :accent, :luts]
   defstruct type: nil,
@@ -14,7 +14,7 @@ defmodule Inky.Displays.Display do
             accent: :black,
             luts: <<>>
 
-  @spec spec_for(:phat | :what, :black | :red | :yellow) :: Inky.Displays.Display.t()
+  @spec spec_for(:phat | :what, :black | :red | :yellow) :: Inky.Display.t()
   def spec_for(type, accent \\ :black)
 
   def spec_for(type = :phat, accent) do
