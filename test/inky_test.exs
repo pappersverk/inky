@@ -1,4 +1,3 @@
-# TODO: rename file to testhal.exs
 Code.require_file("test/support/testhal.exs")
 
 defmodule Inky.InkyTest do
