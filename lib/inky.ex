@@ -203,14 +203,13 @@ defmodule Inky do
       # attempt once, then re-set timer if device was busy
       {:once, :await} -> push(push_policy, state) |> push_once_await(state)
       # attempt once, then clear timer, as that was the intention
-      {:once, :once} -> push_once(state)
-      # attempt once, then give up
-      {:once, :nowait} -> push_once(state)
+      {:once, pp} when pp in [:once, :nowait] -> push_once(state)
       # no attempt to push
       {:skip, :nowait} -> reply_only(:ok, state)
       # elevate timeout type or respect the one previously set
       {:skip, wt} -> reply_timeout(:ok, wt, state)
       {{:timeout, :await}, _} -> reply_timeout(:ok, :await, state)
+      {{:timeout, :once}, :await} -> reply_timeout(:ok, :await, state)
       {{:timeout, :once}, _} -> reply_timeout(:ok, :once, state)
     end
   end
@@ -233,6 +232,8 @@ defmodule Inky do
   end
 
   # Internals
+
+  defp push(push_policy, state) when not (push_policy in [:await, :once]), do: push(:await, state)
 
   defp push(push_policy, state) do
     hm = state.hal_mod

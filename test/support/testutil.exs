@@ -1,4 +1,6 @@
 defmodule Inky.TestUtil do
+  @moduledoc false
+
   def gather_messages(acc \\ []) do
     receive do
       msg -> gather_messages([msg | acc])

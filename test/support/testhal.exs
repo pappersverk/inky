@@ -7,11 +7,13 @@ defmodule Inky.TestHAL do
 
   @behaviour HAL
 
+  def on_update(result) when result in [:ok, :busy], do: Process.put(:update, result)
+
   def assert_expectations() do
     case Process.get(:update, :not_set) do
       [] -> :ok
-      val when val == :ok or is_tuple(val) -> :ok
-      :not_set -> raise ArgumentError, message: "update-value never set"
+      val when val == :ok or val == :busy -> :ok
+      :not_set -> raise ArgumentError, message: "Update value never set!"
       v -> raise ArgumentError, message: "Unexpected update-value: #{inspect(v)}"
     end
   end
@@ -26,8 +28,6 @@ defmodule Inky.TestHAL do
   def handle_update(_pixels, _push_policy, _state) do
     response = do_handle_update()
     do_report_response(response)
-
-    response
   end
 
   #
@@ -37,10 +37,10 @@ defmodule Inky.TestHAL do
   defp do_handle_update() do
     case Process.get(:update, :not_set) do
       :not_set ->
-        arg_err("Called update without setting expectation")
+        arg_err("Update called unexpectedly!")
 
       [] ->
-        arg_err("Called update with no mock values left")
+        arg_err("Update called after all values were consumed!")
 
       result_list when is_list(result_list) ->
         Process.put(:update, tl(result_list))
@@ -52,13 +52,15 @@ defmodule Inky.TestHAL do
   end
 
   defp do_report_response(response) do
-    msg =
+    result =
       case response do
         :busy -> {:error, :device_busy}
         :ok -> :ok
       end
 
-    send({:update, msg})
+    send({:update, result})
+
+    result
   end
 
   defp send(msg), do: Process.send(self(), {__MODULE__, msg}, [])
