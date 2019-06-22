@@ -113,7 +113,11 @@ defmodule Inky do
   @impl GenServer
   def handle_call({:set_pixels, arg, opts}, _from, state) do
     state = %State{state | pixels: update_pixels(arg, state)}
-    dispatch_push(opts[:push] || :await, state)
+
+    case opts[:push] || :await do
+      policy when policy in [:await, :once] -> do_push(policy, state)
+      policy -> do_timeout(policy, state)
+    end
   end
 
   def handle_call(:push, _from, state) do
@@ -196,38 +200,33 @@ defmodule Inky do
     )
   end
 
-  defp dispatch_push(push_policy, state) do
-    case {push_policy, state.wait_type} do
-      # attempt until successful
-      {:await, _} -> push_await(state)
-      # attempt once, then re-set timer if device was busy
-      {:once, :await} -> push(push_policy, state) |> push_once_await(state)
-      # attempt once, then clear timer, as that was the intention
-      {:once, pp} when pp in [:once, :nowait] -> push_once(state)
-      # no attempt to push
-      {:skip, :nowait} -> reply_only(:ok, state)
-      # elevate timeout type or respect the one previously set
-      {:skip, wt} -> reply_timeout(:ok, wt, state)
-      {{:timeout, :await}, _} -> reply_timeout(:ok, :await, state)
-      {{:timeout, :once}, :await} -> reply_timeout(:ok, :await, state)
-      {{:timeout, :once}, _} -> reply_timeout(:ok, :once, state)
+  defp do_push(policy, state) do
+    wt = state.wait_type
+
+    case push(policy, state) do
+      :ok -> reply(:ok, :nowait, state)
+      e = {:error, :device_busy} when wt == :await -> reply_timeout(e, wt, state)
+      e = {:error, :device_busy} -> reply(e, :nowait, state)
     end
   end
 
-  defp push_await(state) do
-    push(:await, state) |> reply_only(state)
+  defp do_timeout(policy, state) do
+    wt = state.wait_type
+
+    case policy do
+      :skip when wt == :nowait -> reply(:ok, :nowait, state)
+      :skip -> reply_timeout(wt, state)
+      {:timeout, :await} -> reply_timeout(:await, state)
+      {:timeout, :once} when wt == :await -> reply_timeout(:await, state)
+      {:timeout, :once} -> reply_timeout(:once, state)
+    end
   end
 
-  defp push_once_await(res = {:error, :device_busy}, state), do: reply_timeout(res, :await, state)
-  defp push_once_await(res, state), do: reply_only(res, state)
-
-  defp push_once(state) do
-    push(:once, state) |> reply_only(state)
+  defp reply(response, timeout_policy, state) do
+    {:reply, response, %State{state | wait_type: timeout_policy}}
   end
 
-  defp reply_only(response, state), do: {:reply, response, %State{state | wait_type: :nowait}}
-
-  defp reply_timeout(response, timeout_policy, state) do
+  defp reply_timeout(response \\ :ok, timeout_policy, state) do
     {:reply, response, %State{state | wait_type: timeout_policy}, @push_timeout}
   end
 

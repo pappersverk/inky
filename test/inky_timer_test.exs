@@ -167,7 +167,7 @@ defmodule Inky.InkyTimerTest do
 
   # TIMEOUT
 
-  describe "Inky update with timeout :once policy" do
+  describe "Inky update with timeout" do
     test ":once timer set", %{inited_state: is} do
       {:reply, :ok, state, _timeout} =
         Inky.handle_call({:set_pixels, %{}, %{push: {:timeout, :once}}}, :from, is)
@@ -184,7 +184,7 @@ defmodule Inky.InkyTimerTest do
       assert TestUtil.gather_messages() == []
     end
 
-    test "once timer not dropped", %{inited_state: is} do
+    test ":once timer not dropped", %{inited_state: is} do
       is = %Inky.State{is | wait_type: :once}
 
       {:reply, :ok, state, _timeout} =
@@ -194,7 +194,7 @@ defmodule Inky.InkyTimerTest do
       assert TestUtil.gather_messages() == []
     end
 
-    test "await timer not overridden by :once", %{inited_state: is} do
+    test ":await timer not overridden by :once", %{inited_state: is} do
       is = %Inky.State{is | wait_type: :await}
 
       {:reply, :ok, state, _timeout} =
