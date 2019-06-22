@@ -1,16 +1,26 @@
 # Inky
 
-[![CircleCI](https://circleci.com/gh/pappersverk/inky.svg?style=svg)](https://circleci.com/gh/pappersverk/inky) [![hex.pm](https://img.shields.io/hexpm/v/inky.svg)](https://hex.pm/packages/inky)
+[![CircleCI](https://circleci.com/gh/pappersverk/inky.svg?style=svg)](https://circleci.com/gh/pappersverk/inky)
+[![hex.pm](https://img.shields.io/hexpm/v/inky.svg)](https://hex.pm/packages/inky)
 
-This is a port of Pimoroni's [python Inky library](https://github.com/pimoroni/inky) written in Elixir. This library is intended to support both Inky pHAT and wHAT, but since we only have pHATs, the wHAT support may not be fully functional.
+This is a port of Pimoroni's [python Inky
+library](https://github.com/pimoroni/inky) written in Elixir. This library is
+intended to support both Inky pHAT and wHAT, but since we only have pHATs, the
+wHAT support may not be fully functional.
 
-See the [documentation](https://hexdocs.pm/inky/api-reference.html) for details regarding how to use the functionality provided.
+See the [API reference](https://hexdocs.pm/inky/api-reference.html) for details
+on how to use the functionality provided.
 
-See [testrun.exs](./testrun.exs) for some simple usage examples.
+### Host Development
 
-The inky_host_dev library is underway for allowing host-side development, but until that is finished you can not see results without using a physical device.
+An [inky host development](https://github.com/pappersverk/inky_host_dev) library
+is underway for allowing host-side development, but until that is finished you
+can not see results without using a physical device.
 
-A basic driver for scenic is in the works, check it out at https://github.com/pappersverk/scenic_driver_inky, to follow how it is progressing.
+### Scenic Driver
+
+A [basic driver](https://github.com/pappersverk/scenic_driver_inky) for scenic
+is in the works, check it out, to follow how it is progressing.
 
 ## Getting started
 
@@ -22,29 +32,32 @@ Inky is available on Hex. Add inky to your mix.exs deps:
 
 Run `mix deps.get` to get the new dep.
 
-In typical usage this would be inside a nerves project. If Inky is installed in your application you can do the following to test it and your display (note the config in init, adjust accordingly):
+## Usage
+
+In typical usage this would be inside a nerves project. If Inky is installed in
+your application you can do the following to test it and your display (note the
+config in init, adjust accordingly):
 
 ```elixir
-# Quadrants (one striped)
-state = Inky.init(:phat, :red)
+# Start your Inky process ...
+{:ok, pid} = Inky.start_link(%{type: :phat, accent: :red})
+# ... or find an existing one.
+#pid = Process.whereis(InkySample)
 
-state =
-  Enum.reduce(0..(state.display.height - 1), state, fn y, state ->
-    Enum.reduce(0..(state.display.width - 1), state, fn x, state ->
-      x_big = x >= width / 2
-      y_big = y >= height / 2
+painter = fn x, y, w, h, _pixels_so_far ->
+  wh = w / 2
+  hh = h / 2
 
-      color =
-        case {x_big, y_big} do
-          {true, true} -> :accent
-          {true, false} when rem(x, 2) == 0 -> :black
-          {true, false} -> :white
-          {false, true} -> :black
-          {false, false} -> :white
-        end
-      Inky.set_pixel(state, x, y, color)
-    end)
-  end)
+  case {x >= wh, y >= hh} do
+    {true, true} -> :red
+    {false, true} -> if(rem(x, 2) == 0, do: :black, else: :white)
+    {true, false} -> :black
+    {false, false} -> :white
+  end
+end
 
-state = Inky.show(state)
+Inky.set_pixels(pid, painter)
+
+# Flip a few pixels
+Inky.set_pixels(pid, %{{0,0}: :black, {3,49}: :red, {23, 4}: white})
 ```
