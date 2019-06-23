@@ -111,12 +111,17 @@ defmodule Inky do
   # GenServer calls
 
   @impl GenServer
-  def handle_call({:set_pixels, arg, opts}, _from, state) do
+  def handle_call({:set_pixels, arg, opts}, _from, state = %State{wait_type: wt}) do
     state = %State{state | pixels: update_pixels(arg, state)}
 
     case opts[:push] || :await do
-      policy when policy in [:await, :once] -> do_push(policy, state)
-      policy -> do_timeout(policy, state)
+      :await -> push(:await, state) |> reply(:nowait, state)
+      :once -> push(:once, state) |> handle_push(state)
+      :skip when wt == :nowait -> reply(:ok, :nowait, state)
+      :skip -> reply_timeout(wt, state)
+      {:timeout, :await} -> reply_timeout(:await, state)
+      {:timeout, :once} when wt == :await -> reply_timeout(:await, state)
+      {:timeout, :once} -> reply_timeout(:once, state)
     end
   end
 
@@ -200,27 +205,12 @@ defmodule Inky do
     )
   end
 
-  defp do_push(policy, state) do
-    wt = state.wait_type
+  # GenServer replies
 
-    case push(policy, state) do
-      :ok -> reply(:ok, :nowait, state)
-      e = {:error, :device_busy} when wt == :await -> reply_timeout(e, wt, state)
-      e = {:error, :device_busy} -> reply(e, :nowait, state)
-    end
-  end
+  defp handle_push(e = {:error, :device_busy}, state = %State{wait_type: :await}),
+    do: reply_timeout(e, :await, state)
 
-  defp do_timeout(policy, state) do
-    wt = state.wait_type
-
-    case policy do
-      :skip when wt == :nowait -> reply(:ok, :nowait, state)
-      :skip -> reply_timeout(wt, state)
-      {:timeout, :await} -> reply_timeout(:await, state)
-      {:timeout, :once} when wt == :await -> reply_timeout(:await, state)
-      {:timeout, :once} -> reply_timeout(:once, state)
-    end
-  end
+  defp handle_push(response, state), do: reply(response, :nowait, state)
 
   defp reply(response, timeout_policy, state) do
     {:reply, response, %State{state | wait_type: timeout_policy}}
