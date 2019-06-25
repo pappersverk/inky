@@ -44,7 +44,7 @@ defmodule Inky.RpiHAL do
   # TODO: (#6) wrap push_policy in a map under the key :push, default :await, call the map opts
   # TODO: (#6) implement support for opts[:border] being a color, default :black
   @impl HAL
-  def handle_update(pixels, push_policy, state = %State{}) do
+  def handle_update(pixels, border, push_policy, state = %State{}) do
     display = %Display{width: w, height: h, rotation: r} = state.display
     black_bits = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map_black)
     accent_bits = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map_accent)
@@ -53,7 +53,7 @@ defmodule Inky.RpiHAL do
     soft_reset(state)
 
     case pre_update(state, push_policy) do
-      :cont -> do_update(state, display, black_bits, accent_bits)
+      :cont -> do_update(state, display, border, black_bits, accent_bits)
       :halt -> {:error, :device_busy}
     end
   end
@@ -74,7 +74,7 @@ defmodule Inky.RpiHAL do
     end
   end
 
-  defp do_update(state, display, buf_black, buf_accent) do
+  defp do_update(state, display, border, buf_black, buf_accent) do
     d_pd = display.packed_dimensions
 
     state
@@ -87,7 +87,7 @@ defmodule Inky.RpiHAL do
     |> set_data_entry_mode()
     |> power_on()
     |> vcom_register()
-    |> set_border_color()
+    |> set_border_color(border)
     |> configure_if_yellow(display.accent)
     |> set_luts(display.luts)
     |> set_dimensions(d_pd.width, d_pd.height)
@@ -128,10 +128,36 @@ defmodule Inky.RpiHAL do
   defp vcom_register(state) do
     # VCOM Register, 0x3c = -1.5v?
     write_command(state, 0x2C, 0x3C)
-    write_command(state, 0x3C, 0x00)
   end
 
-  defp set_border_color(state), do: write_command(state, 0x3C, 0x00)
+  defp set_border_color(state, border) do
+    accent = state.display.accent
+
+    border_data =
+      case border do
+        # GS Transition Define A + VSS + LUT0
+        :black ->
+          0b00000000
+
+        # Fix Level Define A + VSH2 + LUT3
+        c when c in [:red, :accent] and accent == :red ->
+          0b01110011
+
+        # GS Transition Define A + VSH2 + LUT3
+        c when c in [:yellow, :accent] and accent == :yellow ->
+          0b00110011
+
+        # GS Transition Define A + VSH2 + LUT1
+        :white ->
+          0b00110001
+
+        _ ->
+          raise ArgumentError,
+            message: "Invalid border #{inspect(border)} provided. Accent was #{inspect(accent)}"
+      end
+
+    write_command(state, 0x3C, border_data)
+  end
 
   defp configure_if_yellow(state, accent) do
     # Set voltage of VSH and VSL on Yellow device

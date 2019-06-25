@@ -7,7 +7,8 @@ defmodule Inky.HAL do
 
   @callback init(opts :: map()) :: io_state()
   @callback handle_update(
-              opts :: map(),
+              pixels :: map(),
+              border :: :white | :black | :red | :yellow | :accent,
               policy :: :await | :once,
               state :: Inky.IOCommands.State.t()
             ) ::

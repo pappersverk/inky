@@ -14,13 +14,15 @@ defmodule Inky do
   @typedoc "The Inky process name"
   @type name :: atom | {:global, term} | {:via, module, term}
 
+  @default_border :black
   @push_timeout 5000
 
   defmodule State do
     @moduledoc false
 
     @enforce_keys [:display, :hal_state]
-    defstruct display: nil,
+    defstruct border: :black,
+              display: nil,
               hal_mod: RpiHAL,
               hal_state: nil,
               pixels: %{},
@@ -117,19 +119,17 @@ defmodule Inky do
 
   @impl GenServer
   def init(args) do
-    type = Map.fetch!(args, :type)
     accent = Map.fetch!(args, :accent)
+    border = args[:border] || @default_border
     hal_mod = args[:hal_mod] || RpiHAL
+    type = Map.fetch!(args, :type)
 
     display = Display.spec_for(type, accent)
-
-    hal_state =
-      hal_mod.init(%{
-        display: display
-      })
+    hal_state = hal_mod.init(%{display: display})
 
     {:ok,
      %State{
+       border: border,
        display: display,
        hal_mod: hal_mod,
        hal_state: hal_state
@@ -140,7 +140,7 @@ defmodule Inky do
 
   @impl GenServer
   def handle_call({:set_pixels, arg, opts}, _from, state = %State{wait_type: wt}) do
-    state = %State{state | pixels: update_pixels(arg, state)}
+    state = do_set_pixels(arg, opts, state)
 
     case opts[:push] || :await do
       :await -> push(:await, state) |> reply(:nowait, state)
@@ -198,6 +198,15 @@ defmodule Inky do
 
   # Set pixels
 
+  defp do_set_pixels(arg, opts, state) do
+    if opts[:border] != nil,
+      do: %State{state | pixels: update_pixels(arg, state), border: pick_border(opts, state)},
+      else: %State{state | pixels: update_pixels(arg, state)}
+  end
+
+  defp pick_border(nil, %State{border: b}), do: b
+  defp pick_border(border, _state), do: border
+
   defp update_pixels(arg, state) do
     case arg do
       arg when is_map(arg) ->
@@ -254,6 +263,6 @@ defmodule Inky do
 
   defp push(push_policy, state) do
     hm = state.hal_mod
-    hm.handle_update(state.pixels, push_policy, state.hal_state)
+    hm.handle_update(state.pixels, state.border, push_policy, state.hal_state)
   end
 end
