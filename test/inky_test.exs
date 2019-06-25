@@ -5,51 +5,54 @@ defmodule Inky.InkyTest do
 
   use ExUnit.Case
 
+  import ExUnit.CaptureLog
+
   alias Inky.TestHAL
+  alias Inky.TestUtil
 
   doctest Inky
 
   setup_all do
+    init_args = %{
+      accent: :red,
+      hal_mod: TestHAL,
+      type: :test_small
+    }
+
+    {:ok, inited_state} = Inky.init(init_args)
+
+    receive do
+      {TestHAL, :init} -> :ok
+    end
+
     %{
-      init_args: %{
-        accent: :red,
-        hal_mod: TestHAL,
-        type: :test_small
-      }
+      inited_state: inited_state,
+      init_args: init_args
     }
   end
 
   describe "Inky init" do
     test "init()", ctx do
       {:ok, _state} = Inky.init(ctx.init_args)
-
       assert_received {TestHAL, :init}
     end
   end
 
   describe "Inky updates" do
-    test "update pixel data when empty", ctx do
-      {:ok, state} = Inky.init(ctx.init_args)
-      assert_received {TestHAL, :init}
-
-      Process.put(:update, :ok)
+    test "update pixel data when empty", %{inited_state: is} do
+      TestHAL.on_update(:ok)
       pixels = %{{0, 0} => :black, {2, 3} => :red}
-      {:reply, :ok, state} = Inky.handle_call({:set_pixels, pixels, %{}}, self(), state)
-
+      {:reply, :ok, state} = Inky.handle_call({:set_pixels, pixels, %{}}, :from, is)
       TestHAL.assert_expectations()
       assert state.pixels == pixels
     end
 
-    test "update pixel data when already set", ctx do
-      {:ok, state} = Inky.init(ctx.init_args)
-      assert_received {TestHAL, :init}
-
-      Process.put(:update, :ok)
+    test "update pixel data when already set", %{inited_state: is} do
+      TestHAL.on_update(:ok)
       pixels = %{{0, 0} => :black, {2, 3} => :red}
-      {:reply, :ok, state} = Inky.handle_call({:set_pixels, pixels, %{}}, self(), state)
+      {:reply, :ok, state} = Inky.handle_call({:set_pixels, pixels, %{}}, :from, is)
       pixels = %{{1, 2} => :white}
-      {:reply, :ok, state} = Inky.handle_call({:set_pixels, pixels, %{}}, self(), state)
-
+      {:reply, :ok, state} = Inky.handle_call({:set_pixels, pixels, %{}}, :from, state)
       TestHAL.assert_expectations()
       assert state.pixels == %{{1, 2} => :white, {0, 0} => :black, {2, 3} => :red}
     end
@@ -57,7 +60,35 @@ defmodule Inky.InkyTest do
     # TODO: painter tests
   end
 
-  describe "Inky update push policies" do
-    # TODO: write tests for the internal dispatch_push/2 function
+  describe "Inky timeout" do
+    test ":once when device ready", %{inited_state: is} do
+      TestHAL.on_update(:ok)
+      is = %Inky.State{is | wait_type: :once}
+      {:noreply, state} = Inky.handle_info(:timeout, is)
+      TestHAL.assert_expectations()
+      assert state.wait_type == :nowait
+      assert TestUtil.gather_messages() == [{TestHAL, {:update, :ok}}]
+    end
+
+    test ":once when device busy", %{inited_state: is} do
+      TestHAL.on_update(:busy)
+      is = %Inky.State{is | wait_type: :once}
+
+      capture_log(fn ->
+        {:noreply, state} = Inky.handle_info(:timeout, is)
+        TestHAL.assert_expectations()
+        assert state.wait_type == :nowait
+        assert TestUtil.gather_messages() == [{TestHAL, {:update, {:error, :device_busy}}}]
+      end)
+    end
+
+    test ":await", %{inited_state: is} do
+      TestHAL.on_update(:ok)
+      is = %Inky.State{is | wait_type: :await}
+      {:noreply, state} = Inky.handle_info(:timeout, is)
+      TestHAL.assert_expectations()
+      assert state.wait_type == :nowait
+      assert TestUtil.gather_messages() == [{TestHAL, {:update, :ok}}]
+    end
   end
 end
