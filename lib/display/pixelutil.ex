@@ -1,6 +1,6 @@
 defmodule Inky.PixelUtil do
   @moduledoc """
-  `PixelUtil` maps pixels to bitstrings to be sent to an Inky screen
+  PixelUtil maps pixels to bitstrings to be sent to an Inky screen
   """
 
   def pixels_to_bits(pixels, width, height, rotation_degrees, color_map) do

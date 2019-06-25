@@ -11,6 +11,9 @@ defmodule Inky do
   alias Inky.Display
   alias Inky.RpiHAL
 
+  @typedoc "The Inky process name"
+  @type name :: atom | {:global, term} | {:via, module, term}
+
   @push_timeout 5000
 
   defmodule State do
@@ -30,12 +33,18 @@ defmodule Inky do
   #
 
   @doc """
-  Start a GenServer that deals with the HAL state (initialization of and communication with the display) and pushing pixels to the physical display. This function will do some of the necessary preparation to enable communication with the display.
+  Start an Inky GenServer for a display of type `args[:type]` and with the
+  color `args[:accent]`.
+
+  The GenServer deals with the HAL state and pushing pixels to the physical
+  display.
 
   ## Parameters
 
     - type: Atom for either :phat or :what
     - accent: Accent color, the color the display supports aside form white and black. Atom, :black, :red or :yellow.
+
+  See `GenServer.start_link/3` for return values.
   """
   def start_link(args \\ %{}) do
     opts = if(args[:name], do: [name: args[:name]], else: [])
@@ -43,42 +52,61 @@ defmodule Inky do
   end
 
   @doc """
-  `set_pixels(pid | name, pixels | painter, opts \\ %{push: :await})` set
-  pixels and draw to display (or not!), with data or a painter function.
+  `set_pixels` sets pixels and draws to the display (or not!), with new pixel
+  data or a painter function.
 
-  set_pixels updates the internal state either with specific pixels or by
-  calling `painter.(x,y,w,h,current_pixels)` for all points in the screen, in
-  an undefined order.
+  `arg` can be:
+  - `pixels :: map()`, a map of pixels to merge into the current state
+  - `painter :: (x, y, width, height, pixels)`, a function that will be invoked
+    to pick a color for all points in the screen, in an undefined order.
 
-  Currently, the only option checked is `:push`, which represents the minimum
-  pixel pushing policy the caller wishes to apply for their request. Valid
+  Currently, the only value in `opts` checked is `:push`, which represents the
+  minimum pixel pushing policy the caller wishes to apply for their request. Valid
   values are listed and explained below.
 
   NOTE: the internal state of Inky will still be updated, regardless of which
   pushing policy is employed.
 
-  - `:await`: Busy wait until you can push to display, clearing any previously
-    set timeout. This is the default.
-  - `:once`: Push to the display if it is not busy, otherwise, report that it
-    was busy. Only `:await` timeouts are reset if a `:once` push has failed.
-  - `{:timeout, :await}`: Use genserver timeouts to avoid multiple updates.
+  - `:await` - Busy wait until you can push to display, clearing any previously
+    set timeout. *This is the default.*
+  - `:once` - Push to the display if it is not busy, otherwise, report that it
+    was busy. `:await` timeouts are reset if a `:once` push has failed.
+  - `{:timeout, :await}` - Use genserver timeouts to avoid multiple updates.
     When the timeout triggers, await device with a busy wait and then push to
     the display. If the timeout previously was :once, it is replaced.
-  - `{:timeout, :once}`: Use genserver timeouts to avoid multiple updates. When
+  - `{:timeout, :once}` - Use genserver timeouts to avoid multiple updates. When
     the timeout triggers, update the display if not busy. Does not downgrade a
     previously set `:await` timeout.
-  - `:skip`: Do not push to display. If there has been a timeout previously
+  - `:skip` - Do not push to display. If there has been a timeout previously
     set, but that has yet to fire, it will remain set.
+
+  Returns one of the following, depending on the push policy and display state:
+  - `:ok`
+  - `{:error, :device_busy}`
   """
+  @spec set_pixels(pid :: pid() | name(), arg :: map() | function(), opts :: map()) ::
+          :ok | {:error, :device_busy}
   def set_pixels(pid, arg, opts \\ %{}),
     do: GenServer.call(pid, {:set_pixels, arg, opts}, :infinity)
 
+  @doc """
+  Shows the internally buffered pixels on the display.
+
+  If `opts[:async]` is `true`, the call will be asynchronous.
+
+  Returns `:ok`.
+  """
   def show(server, opts \\ %{}) do
     if opts[:async] === true,
       do: GenServer.cast(server, :push),
       else: GenServer.call(server, :push, :infinity)
   end
 
+  @doc """
+  Stops `server`.
+
+  Returns `:ok`.
+  """
   def stop(server) do
     GenServer.stop(server)
   end

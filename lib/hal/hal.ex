@@ -5,11 +5,11 @@ defmodule Inky.HAL do
 
   @type io_state :: any()
 
-  @callback init(map()) :: io_state()
+  @callback init(opts :: map()) :: io_state()
   @callback handle_update(
-              map(),
-              :await | :once,
-              Inky.IOCommands.State.t()
+              opts :: map(),
+              policy :: :await | :once,
+              state :: Inky.IOCommands.State.t()
             ) ::
               :ok | {:error, :device_busy}
 end

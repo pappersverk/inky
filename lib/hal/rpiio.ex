@@ -1,6 +1,6 @@
 defmodule Inky.RpiIO do
   @moduledoc """
-  An InkyIO implementation intended for use with raspberry pis and relies on
+  An `Inky.InkyIO` implementation intended for use with raspberry pis and relies on
   Circuits.GPIO and Cirtuits.SPI.
   """
 

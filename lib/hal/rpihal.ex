@@ -2,7 +2,7 @@ defmodule Inky.RpiHAL do
   @default_io_mod Inky.RpiIO
 
   @moduledoc """
-  `#{inspect(__MODULE__)}` is responsible for sending commands to the Inky screen. It delegates
+  An `Inky.HAL` implementation responsible for sending commands to the Inky screen. It delegates
   to whatever IO module its user provides at init, but defaults to #{inspect(@default_io_mod)}
   """
 
