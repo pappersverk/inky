@@ -41,8 +41,6 @@ defmodule Inky.RpiHAL do
     }
   end
 
-  # TODO: (#6) wrap push_policy in a map under the key :push, default :await, call the map opts
-  # TODO: (#6) implement support for opts[:border] being a color, default :black
   @impl HAL
   def handle_update(pixels, border, push_policy, state = %State{}) do
     display = %Display{width: w, height: h, rotation: r} = state.display
