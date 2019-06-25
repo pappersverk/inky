@@ -13,7 +13,7 @@
       # Run any exec using `mix credo -C <name>`. If no exec name is given
       # "default" is used.
       #
-      name: "default",
+      name: "Inky",
       #
       # These are the files included in the analysis:
       files: %{
@@ -110,11 +110,11 @@
         {Credo.Check.Refactor.NegatedConditionsInUnless, []},
         {Credo.Check.Refactor.NegatedConditionsWithElse, []},
         {Credo.Check.Refactor.Nesting, []},
-        {Credo.Check.Refactor.PipeChainStart,
-         [
-           excluded_argument_types: [:atom, :binary, :fn, :keyword, :number],
-           excluded_functions: []
-         ]},
+        #{Credo.Check.Refactor.PipeChainStart,
+        # [
+        #   excluded_argument_types: [:atom, :binary, :fn, :keyword, :number],
+        #   excluded_functions: []
+        # ]},
         {Credo.Check.Refactor.UnlessWithElse, []},
 
         #
