@@ -35,56 +35,69 @@ defmodule Inky do
   #
 
   @doc """
-  Start an Inky GenServer for a display of type `args[:type]` and with the
-  color `args[:accent]`.
+  Start an Inky GenServer for a display of type `type`, with the color `accent`
+  using the optionally provided options `opts`.
 
   The GenServer deals with the HAL state and pushing pixels to the physical
   display.
 
   ## Parameters
 
-    - type: Atom for either :phat or :what
-    - accent: Accent color, the color the display supports aside form white and black. Atom, :black, :red or :yellow.
+    - `type` - An atom, representing the display type, either `:phat` or `:what`
+    - `accent` - An atom, representing the display's third color, one of
+      `:black`, `:red` or `:yellow`.
+
+  ## Options
+
+    - `border` - Atom for the border color, defaults to `:black`
+    - `name` - GenServer name option for naming the process
 
   See `GenServer.start_link/3` for return values.
   """
-  def start_link(args \\ %{}) do
-    opts = if(args[:name], do: [name: args[:name]], else: [])
-    GenServer.start_link(__MODULE__, args, opts)
+  def start_link(type, accent, opts \\ %{}) do
+    genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
+    GenServer.start_link(__MODULE__, [type, accent, opts], genserver_opts)
   end
 
   @doc """
   `set_pixels` sets pixels and draws to the display (or not!), with new pixel
   data or a painter function.
 
-  `arg` can be:
-  - `pixels :: map()`, a map of pixels to merge into the current state
-  - `painter :: (x, y, width, height, pixels)`, a function that will be invoked
-    to pick a color for all points in the screen, in an undefined order.
+  Returns:
+  - `:ok` - If no push was requested or if it was and it worked, or
+  - `{:error, :device_busy}` - If a push to the device was requested but could
+    not be performed due to the device reporting a busy status.
 
-  Currently, the only value in `opts` checked is `:push`, which represents the
-  minimum pixel pushing policy the caller wishes to apply for their request. Valid
-  values are listed and explained below.
+  ## Parameters
 
-  NOTE: the internal state of Inky will still be updated, regardless of which
-  pushing policy is employed.
+  - `pid` - A pid or valid `name` option that can be provided to GenServer.
+  - `arg` - A map of pixels or a painter function.
+    - `pixels :: map()`, a map of pixels to merge into the current state
+    - `painter :: (x, y, width, height, pixels)`, a function that will be
+      invoked to pick a color for all points in the screen, in an undefined
+      order.
 
-  - `:await` - Busy wait until you can push to display, clearing any previously
-    set timeout. *This is the default.*
-  - `:once` - Push to the display if it is not busy, otherwise, report that it
-    was busy. `:await` timeouts are reset if a `:once` push has failed.
-  - `{:timeout, :await}` - Use genserver timeouts to avoid multiple updates.
-    When the timeout triggers, await device with a busy wait and then push to
-    the display. If the timeout previously was :once, it is replaced.
-  - `{:timeout, :once}` - Use genserver timeouts to avoid multiple updates. When
-    the timeout triggers, update the display if not busy. Does not downgrade a
-    previously set `:await` timeout.
-  - `:skip` - Do not push to display. If there has been a timeout previously
-    set, but that has yet to fire, it will remain set.
+  ## Options
 
-  Returns one of the following, depending on the push policy and display state:
-  - `:ok`
-  - `{:error, :device_busy}`
+  - `:border` - Atom for the border color.
+  - `:push` - Represents the minimum pixel pushing policy the caller wishes to
+     apply for their request. Valid values are listed and explained below.
+
+      NOTE: the internal state of Inky will still be updated, regardless of
+     which pushing policy is employed.
+
+      - `:await` - Busy wait until you can push to display, clearing any
+        previously set timeout. *This is the default.*
+      - `:once` - Push to the display if it is not busy, otherwise, report that
+        it was busy. `:await` timeouts are reset if a `:once` push has failed.
+      - `{:timeout, :await}` - Use genserver timeouts to avoid multiple updates.
+        When the timeout triggers, await device with a busy wait and then push
+        to the display. If the timeout previously was :once, it is replaced.
+      - `{:timeout, :once}` - Use genserver timeouts to avoid multiple updates.
+        When the timeout triggers, update the display if not busy. Does not
+        downgrade a previously set `:await` timeout.
+      - `:skip` - Do not push to display. If there has been a timeout previously
+        set, but that has yet to fire, it will remain set.
   """
   @spec set_pixels(pid :: pid() | name(), arg :: map() | function(), opts :: map()) ::
           :ok | {:error, :device_busy}
@@ -118,11 +131,9 @@ defmodule Inky do
   #
 
   @impl GenServer
-  def init(args) do
-    accent = Map.fetch!(args, :accent)
-    border = args[:border] || @default_border
-    hal_mod = args[:hal_mod] || RpiHAL
-    type = Map.fetch!(args, :type)
+  def init([type, accent, opts]) do
+    border = opts[:border] || @default_border
+    hal_mod = opts[:hal_mod] || RpiHAL
 
     display = Display.spec_for(type, accent)
     hal_state = hal_mod.init(%{display: display})

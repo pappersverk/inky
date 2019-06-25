@@ -2,8 +2,9 @@ defmodule Inky.RpiHAL do
   @default_io_mod Inky.RpiIO
 
   @moduledoc """
-  An `Inky.HAL` implementation responsible for sending commands to the Inky screen. It delegates
-  to whatever IO module its user provides at init, but defaults to #{inspect(@default_io_mod)}
+  An `Inky.HAL` implementation responsible for sending commands to the Inky
+  screen. It delegates to whatever IO module its user provides at init, but
+  defaults to #{inspect(@default_io_mod)}
   """
 
   @behaviour Inky.HAL
@@ -30,7 +31,7 @@ defmodule Inky.RpiHAL do
 
   @impl HAL
   def init(args) do
-    display = Map.fetch!(args, :display)
+    display = args[:display] || raise(ArgumentError, message: ":display missing")
     io_mod = args[:io_mod] || @default_io_mod
     io_args = args[:io_args] || []
 
