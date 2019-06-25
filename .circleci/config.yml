@@ -34,21 +34,22 @@ jobs:
 
       - save_cache:  # generate and store mix cache
           key: v1-mix-cache-{{ .Branch }}-{{ checksum "mix.lock" }}
-          paths: "deps"
+          paths: ["deps"]
       - save_cache:  # make another, less specific cache
           key: v1-mix-cache-{{ .Branch }}
-          paths: "deps"
+          paths: ["deps"]
       - save_cache:  # you should really save one more cache (just in case)
           key: v1-mix-cache
-          paths: "deps"
+          paths: ["deps"]
       - save_cache: # don't forget to save a *build* cache, too
           key: v1-build-cache-{{ .Branch }}
-          paths: "_build"
+          paths: ["_build"]
       - save_cache: # and one more build cache for good measure
           key: v1-build-cache
-          paths: "_build"
+          paths: ["_build"]
 
       - run: mix test
+      - run: mix credo
 
       - store_test_results:  # upload junit test results for display in Test Summary
           # Read more: https://circleci.com/docs/2.0/collect-test-data/
