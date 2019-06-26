@@ -31,7 +31,7 @@ defmodule Inky.RpiHAL do
 
   @impl HAL
   def init(args) do
-    display = args[:display] || raise(ArgumentError, message: ":display missing")
+    display = args[:display] || raise(ArgumentError, message: ":display missing in args")
     io_mod = args[:io_mod] || @default_io_mod
     io_args = args[:io_args] || []
 
