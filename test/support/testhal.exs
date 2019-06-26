@@ -25,7 +25,7 @@ defmodule Inky.TestHAL do
   end
 
   @impl HAL
-  def handle_update(_pixels, _push_policy, _state) do
+  def handle_update(_pixels, _border, _push_policy, _state) do
     response = do_handle_update()
     do_report_response(response)
   end
