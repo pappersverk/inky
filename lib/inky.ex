@@ -210,9 +210,11 @@ defmodule Inky do
   # Set pixels
 
   defp do_set_pixels(arg, opts, state) do
-    if opts[:border] != nil,
-      do: %State{state | pixels: update_pixels(arg, state), border: pick_border(opts, state)},
-      else: %State{state | pixels: update_pixels(arg, state)}
+    %State{
+      state
+      | pixels: update_pixels(arg, state),
+        border: pick_border(opts[:border], state)
+    }
   end
 
   defp pick_border(nil, %State{border: b}), do: b
