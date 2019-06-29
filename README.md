@@ -40,9 +40,7 @@ config in init, adjust accordingly):
 
 ```elixir
 # Start your Inky process ...
-{:ok, pid} = Inky.start_link(%{type: :phat, accent: :red})
-# ... or find an existing one.
-#pid = Process.whereis(InkySample)
+{:ok, pid} = Inky.start_link(:phat, :red, %{name: InkySample})
 
 painter = fn x, y, w, h, _pixels_so_far ->
   wh = w / 2
@@ -56,7 +54,7 @@ painter = fn x, y, w, h, _pixels_so_far ->
   end
 end
 
-Inky.set_pixels(pid, painter)
+Inky.set_pixels(InkySample, painter, border: :white)
 
 # Flip a few pixels
 Inky.set_pixels(pid, %{{0,0}: :black, {3,49}: :red, {23, 4}: white})
