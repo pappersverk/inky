@@ -72,10 +72,18 @@ defmodule Inky do
 
   - `pid` - A pid or valid `name` option that can be provided to GenServer.
   - `arg` - A map of pixels or a painter function.
-    - `pixels :: map()`, a map of pixels to merge into the current state
+    - `pixels :: map()`, a map of pixels to merge into the current state. The map use the structure `%{{x, y}: color}` to indicate pixel coordinates and a color atom.
     - `painter :: (x, y, width, height, pixels)`, a function that will be
       invoked to pick a color for all points in the screen, in an undefined
-      order.
+      order. Should return a color atom.
+
+  ## The color atoms
+
+  - `:white`
+  - `:black`
+  - `:accent` - The third color for a display. Usually red och yellow.
+  - `:red` - Equivalent to `:accent`.
+  - `:yellow` - Equivalent to `:accent`.
 
   ## Options
 
@@ -86,12 +94,12 @@ defmodule Inky do
       NOTE: the internal state of Inky will still be updated, regardless of
      which pushing policy is employed.
 
-      - `:await` - Busy wait until you can push to display, clearing any
+      - `:await` - Perform a blocking wait until the display is ready and you can push to it. Clears any
         previously set timeout. *This is the default.*
       - `:once` - Push to the display if it is not busy, otherwise, report that
         it was busy. `:await` timeouts are reset if a `:once` push has failed.
       - `{:timeout, :await}` - Use genserver timeouts to avoid multiple updates.
-        When the timeout triggers, await device with a busy wait and then push
+        When the timeout triggers, await device with a blocking wait and then push
         to the display. If the timeout previously was :once, it is replaced.
       - `{:timeout, :once}` - Use genserver timeouts to avoid multiple updates.
         When the timeout triggers, update the display if not busy. Does not
