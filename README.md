@@ -27,12 +27,18 @@ is in the works, check it out, to follow how it is progressing.
 Inky is available on Hex. Add inky to your mix.exs deps:
 
 ```elixir
-{:inky, "~> 0.0.1"},
+{:inky, "~> 1.0.0"},
 ```
 
 Run `mix deps.get` to get the new dep.
 
 ## Usage
+
+A sample for Inky only, both host development and on-device is available as [pappersverk/sample_inky](https://github.com/pappersverk/sample_inky).
+
+A sample for using it with Scenic both for host development and on-device is available as [pappersverk/sample_scenic_inky](https://github.com/pappersverk/sample_scenic_inky).
+
+## Brief example
 
 In typical usage this would be inside a nerves project. If Inky is installed in
 your application you can do the following to test it and your display (note the
