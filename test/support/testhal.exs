@@ -1,11 +1,11 @@
-alias Inky.HAL
-
 defmodule Inky.TestHAL do
   @moduledoc """
   A module that implements the HAL behaviour for testing purposes.
   """
 
-  @behaviour HAL
+  @behaviour Inky.HAL
+
+  alias Inky.HAL
 
   def on_update(result) when result in [:ok, :busy], do: Process.put(:update, result)
 
