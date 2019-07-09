@@ -6,6 +6,7 @@ defmodule Inky.MixProject do
       app: :inky,
       version: "1.0.0",
       elixir: "~> 1.8",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       source_url: "https://github.com/pappersverk/inky/",
       deps: deps(),
@@ -20,6 +21,9 @@ defmodule Inky.MixProject do
       extra_applications: [:logger]
     ]
   end
+
+  defp elixirc_paths(:benchmark), do: ["lib", "benchmark/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do

@@ -1,0 +1,1 @@
+Inky.InkyBench.run()

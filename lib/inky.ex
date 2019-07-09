@@ -28,6 +28,8 @@ defmodule Inky do
               pixels: %{},
               type: nil,
               wait_type: :nowait
+
+    def wait_type(wait_type, state), do: %State{state | wait_type: wait_type}
   end
 
   #
@@ -228,15 +230,8 @@ defmodule Inky do
   defp pick_border(nil, %State{border: b}), do: b
   defp pick_border(border, _state), do: border
 
-  defp update_pixels(arg, state) do
-    case arg do
-      arg when is_map(arg) ->
-        handle_set_pixels_map(arg, state)
-
-      arg when is_function(arg, 5) ->
-        handle_set_pixels_fun(arg, state)
-    end
-  end
+  defp update_pixels(arg, state) when is_map(arg), do: handle_set_pixels_map(arg, state)
+  defp update_pixels(arg, state) when is_function(arg, 5), do: handle_set_pixels_fun(arg, state)
 
   defp handle_set_pixels_map(pixels, state) do
     Map.merge(state.pixels, pixels)
@@ -246,9 +241,14 @@ defmodule Inky do
     %Display{width: w, height: h} = state.display
 
     stream_points(w, h)
-    |> Enum.reduce(state.pixels, fn {x, y}, acc ->
-      Map.put(acc, {x, y}, painter.(x, y, w, h, acc))
+    |> Enum.reduce(state.pixels, fn point = {x, y}, acc ->
+      color = painter.(x, y, w, h, acc)
+      update_pixel_map(point, acc, color)
     end)
+  end
+
+  defp update_pixel_map(point, acc, color) do
+    Map.put(acc, point, color)
   end
 
   defp stream_points(w, h) do
@@ -270,13 +270,11 @@ defmodule Inky do
 
   defp handle_push(response, state), do: reply(response, :nowait, state)
 
-  defp reply(response, timeout_policy, state) do
-    {:reply, response, %State{state | wait_type: timeout_policy}}
-  end
+  defp reply(response, timeout_policy, state),
+    do: {:reply, response, State.wait_type(timeout_policy, state)}
 
-  defp reply_timeout(response \\ :ok, timeout_policy, state) do
-    {:reply, response, %State{state | wait_type: timeout_policy}, @push_timeout}
-  end
+  defp reply_timeout(response \\ :ok, timeout_policy, state),
+    do: {:reply, response, State.wait_type(timeout_policy, state), @push_timeout}
 
   # Internals
 
