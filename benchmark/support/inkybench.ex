@@ -3,9 +3,11 @@ defmodule Inky.InkyBench do
 
   use Bitwise
 
-  def run() do
-    {:ok, state} = Inky.init([:phat, :red, [hal_mod: Inky.BenchHAL]])
-    Inky.handle_call({:set_pixels, &painter/5, %{}}, nil, state)
+  def run(opts) do
+    for _ <- 0..opts[:runs] do
+      {:ok, state} = Inky.init([:phat, :red, [hal_mod: Inky.BenchHAL]])
+      Inky.handle_call({:set_pixels, &painter/5, %{}}, nil, state)
+    end
   end
 
   defp painter(x, y, w, h, _pixels_so_far) do

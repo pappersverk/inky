@@ -3,18 +3,20 @@ defmodule Inky.PixelUtil do
   PixelUtil maps pixels to bitstrings to be sent to an Inky screen
   """
 
-  def pixels_to_bits(pixels, width, height, rotation_degrees, color_map) do
-    {outer_axis, dimension_vectors} =
-      rotation_degrees
-      |> normalised_rotation()
-      |> rotation_opts()
+  def pixels_to_bits(pixels, width, height, rotation_degrees) do
+    n_r = normalised_rotation(rotation_degrees)
+    {outer_axis, dimension_vectors} = rotation_opts(n_r)
+    ranges = rotated_ranges(dimension_vectors, width, height)
 
-    dimension_vectors
-    |> rotated_ranges(width, height)
-    |> do_pixels_to_bits(
-      &pixels[pixel_key(outer_axis, &1, &2)],
-      &(color_map[&1] || color_map.miss)
-    )
+    pixel_generator =
+      if outer_axis == :x,
+        do: &pixels[pixel_key_x(&1, &2)],
+        else: &pixels[pixel_key_y(&1, &2)]
+
+    {
+      do_pixels_to_bits(ranges, pixel_generator, &black_pixel_bit/1),
+      do_pixels_to_bits(ranges, pixel_generator, &accent_pixel_bit/1)
+    }
   end
 
   @doc """
@@ -61,6 +63,12 @@ defmodule Inky.PixelUtil do
   defp rotated_dimension(_width, height, {:y, 1}), do: 0..(height - 1)
   defp rotated_dimension(_width, height, {:y, -1}), do: (height - 1)..0
 
+  defp black_pixel_bit(:black), do: 0
+  defp black_pixel_bit(_), do: 1
+
+  defp accent_pixel_bit(accent) when accent in [:accent, :red, :yellow], do: 1
+  defp accent_pixel_bit(_), do: 0
+
   defp do_pixels_to_bits({i_range, j_range}, pixel_picker, cmap) do
     for i <- i_range,
         j <- j_range,
@@ -68,6 +76,6 @@ defmodule Inky.PixelUtil do
         into: <<>>
   end
 
-  defp pixel_key(:x, i, j), do: {i, j}
-  defp pixel_key(:y, i, j), do: {j, i}
+  defp pixel_key_x(i, j), do: {i, j}
+  defp pixel_key_y(i, j), do: {j, i}
 end
