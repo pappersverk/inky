@@ -140,5 +140,20 @@ defmodule Inky.RpiHALTest do
       :ok = RpiHAL.handle_update(ctx.pixels, :accent, :await, yellow_state)
       assert get_border_command() == [send_command: {60, 51}]
     end
+
+    test "red accent, larger display", ctx do
+      # arrange
+      display = Display.spec_for(:what, :red)
+      init_red = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
+      red_state = RpiHAL.init(init_red)
+
+      # act, explicit border
+      :ok = RpiHAL.handle_update(ctx.pixels, :red, :await, red_state)
+      assert get_border_command() == [send_command: {60, 115}]
+
+      # act, implicit border
+      :ok = RpiHAL.handle_update(ctx.pixels, :accent, :await, red_state)
+      assert get_border_command() == [send_command: {60, 115}]
+    end
   end
 end
