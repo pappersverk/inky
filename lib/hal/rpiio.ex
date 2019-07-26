@@ -105,13 +105,15 @@ defmodule Inky.RpiIO do
         nil
 
       {:error, :transfer_failed} ->
-        parts = div(byte_size(value) - 1, @spi_chunk_size) + 1
-
+        size = byte_size(value)
+        parts = div(size - 1, @spi_chunk_size)
         for x <- 0..parts do
           offset = x * @spi_chunk_size
+          left = size - offset
+          length = if left > @spi_chunk_size, do: @spi_chunk_size, else: left
 
           {:ok, <<_::binary>>} =
-            SPI.transfer(pins.spi_pid, :binary.part(value, offset, offset + @spi_chunk_size))
+            SPI.transfer(pins.spi_pid, :binary.part(value, offset, length))
         end
     end
   end
