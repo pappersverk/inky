@@ -87,7 +87,8 @@ defmodule Inky.RpiHAL do
     |> power_on()
     |> vcom_register()
     |> set_border_color(border)
-    |> configure_display_specific(display.accent, display.type)
+    |> configure_if_yellow(display.accent)
+    |> configure_if_red_what(display.accent, display.type)
     |> set_luts(display.luts)
     |> set_dimensions(d_pd.width, d_pd.height)
     |> push_pixel_data_bw(buf_black)
@@ -158,27 +159,21 @@ defmodule Inky.RpiHAL do
     write_command(state, 0x3C, border_data)
   end
 
-  defp configure_display_specific(state, accent, type) do
-    state
-    |> configure_if_yellow(accent)
-    |> configure_if_red_what(accent, type)
-  end
-
-  defp configure_if_yellow(state, accent) do
+  defp configure_if_yellow(state, :yellow) do
     # Set voltage of VSH and VSL on Yellow device
-    if accent == :yellow do
-      write_command(state, 0x04, 0x07)
-    else
-      state
-    end
+    write_command(state, 0x04, 0x07)
   end
 
-  defp configure_if_red_what(state, accent, type) do
-    if accent == :red and type == :what do
-      write_command(state, 0x04, <<0x30, 0xAC, 0x22>>)
-    else
-      state
-    end
+  defp configure_if_yellow(state, _) do
+    state
+  end
+
+  defp configure_if_red_what(state, :red, :what) do
+    write_command(state, 0x04, <<0x30, 0xAC, 0x22>>)
+  end
+
+  defp configure_if_red_what(state, _, _) do
+    state
   end
 
   defp set_luts(state, luts), do: write_command(state, 0x32, luts)
