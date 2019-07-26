@@ -159,22 +159,15 @@ defmodule Inky.RpiHAL do
     write_command(state, 0x3C, border_data)
   end
 
-  defp configure_if_yellow(state, :yellow) do
-    # Set voltage of VSH and VSL on Yellow device
-    write_command(state, 0x04, 0x07)
-  end
+  # Set voltage of VSH and VSL on Yellow device
+  defp configure_if_yellow(state, :yellow), do: write_command(state, 0x04, 0x07)
 
-  defp configure_if_yellow(state, _) do
-    state
-  end
+  defp configure_if_yellow(state, _), do: state
 
-  defp configure_if_red_what(state, :red, :what) do
-    write_command(state, 0x04, <<0x30, 0xAC, 0x22>>)
-  end
+  defp configure_if_red_what(state, :red, :what),
+    do: write_command(state, 0x04, <<0x30, 0xAC, 0x22>>)
 
-  defp configure_if_red_what(state, _, _) do
-    state
-  end
+  defp configure_if_red_what(state, _, _), do: state
 
   defp set_luts(state, luts), do: write_command(state, 0x32, luts)
 

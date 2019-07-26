@@ -101,19 +101,19 @@ defmodule Inky.RpiIO do
     :ok = GPIO.write(pins.dc_pid, data_or_command)
 
     case SPI.transfer(pins.spi_pid, value) do
-      {:ok, <<_::binary>>} ->
-        nil
+      {:ok, response} ->
+        {:ok, response}
 
       {:error, :transfer_failed} ->
         size = byte_size(value)
         parts = div(size - 1, @spi_chunk_size)
+
         for x <- 0..parts do
           offset = x * @spi_chunk_size
           left = size - offset
           length = if left > @spi_chunk_size, do: @spi_chunk_size, else: left
 
-          {:ok, <<_::binary>>} =
-            SPI.transfer(pins.spi_pid, :binary.part(value, offset, length))
+          {:ok, <<_::binary>>} = SPI.transfer(pins.spi_pid, :binary.part(value, offset, length))
         end
     end
   end
