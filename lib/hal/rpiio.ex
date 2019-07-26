@@ -34,6 +34,7 @@ defmodule Inky.RpiIO do
   @spi_speed_hz 488_000
   @spi_command 0
   @spi_data 1
+  @spi_chunk_size 4096
 
   # API
 
@@ -93,12 +94,26 @@ defmodule Inky.RpiIO do
 
   defp spi_write(pins, data_or_command, values) when is_list(values) do
     :ok = GPIO.write(pins.dc_pid, data_or_command)
-    {:ok, <<_::binary>>} = SPI.transfer(pins.spi_pid, :erlang.list_to_binary(values))
+    spi_write(pins, data_or_command, :erlang.list_to_binary(values))
   end
 
   defp spi_write(pins, data_or_command, value) when is_binary(value) do
     :ok = GPIO.write(pins.dc_pid, data_or_command)
-    {:ok, <<_::binary>>} = SPI.transfer(pins.spi_pid, value)
+
+    case SPI.transfer(pins.spi_pid, value) do
+      {:ok, <<_::binary>>} ->
+        nil
+
+      {:error, :transfer_failed} ->
+        parts = div(byte_size(value) - 1, @spi_chunk_size) + 1
+
+        for x <- 0..parts do
+          offset = x * @spi_chunk_size
+
+          {:ok, <<_::binary>>} =
+            SPI.transfer(pins.spi_pid, :binary.part(value, offset, offset + @spi_chunk_size))
+        end
+    end
   end
 
   # internals
