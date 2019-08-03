@@ -8,9 +8,6 @@ defmodule Inky do
   require Integer
   require Logger
 
-  alias Inky.Display
-  alias Inky.RpiHAL
-
   @typedoc "The Inky process name"
   @type name :: atom | {:global, term} | {:via, module, term}
 
@@ -23,9 +20,10 @@ defmodule Inky do
     @enforce_keys [:display, :hal_state]
     defstruct border: :black,
               display: nil,
-              hal_mod: RpiHAL,
+              hal_mod: Inky.RpiHAL,
               hal_state: nil,
-              pixels: %{},
+              pixel_data: nil,
+              # pixels: %{},
               type: nil,
               wait_type: :nowait
 
@@ -143,9 +141,10 @@ defmodule Inky do
   @impl GenServer
   def init([type, accent, opts]) do
     border = opts[:border] || @default_border
-    hal_mod = opts[:hal_mod] || RpiHAL
+    hal_mod = opts[:hal_mod] || Inky.RpiHAL
 
-    display = Display.spec_for(type, accent)
+    display = Inky.Display.spec_for(type, accent)
+    pixel_data = Inky.PixelData.new(display.rotation)
     hal_state = hal_mod.init(%{display: display})
 
     {:ok,
@@ -153,7 +152,8 @@ defmodule Inky do
        border: border,
        display: display,
        hal_mod: hal_mod,
-       hal_state: hal_state
+       hal_state: hal_state,
+       pixel_data: pixel_data
      }}
   end
 
@@ -222,46 +222,13 @@ defmodule Inky do
   defp do_set_pixels(arg, opts, state) do
     %State{
       state
-      | pixels: update_pixels(arg, state),
+      | pixel_data: Inky.PixelData.update(state.pixel_data, arg),
         border: pick_border(opts[:border], state)
     }
   end
 
   defp pick_border(nil, %State{border: b}), do: b
   defp pick_border(border, _state), do: border
-
-  defp update_pixels(arg, state) when is_map(arg), do: handle_set_pixels_map(arg, state)
-  defp update_pixels(arg, state) when is_function(arg, 5), do: handle_set_pixels_fun(arg, state)
-
-  defp handle_set_pixels_map(pixels, state) do
-    Map.merge(state.pixels, pixels)
-  end
-
-  defp handle_set_pixels_fun(painter, state) do
-    %Display{width: w, height: h} = state.display
-
-    stream_points(w, h)
-    |> Enum.reduce(state.pixels, fn point = {x, y}, acc ->
-      color = painter.(x, y, w, h, acc)
-      update_pixel_map(point, acc, color)
-    end)
-  end
-
-  defp update_pixel_map(point, acc, color) do
-    Map.put(acc, point, color)
-  end
-
-  defp stream_points(w, h) do
-    Stream.resource(
-      fn -> {{0, 0}, {w - 1, h - 1}} end,
-      fn
-        {{w, h}, {w, h}} -> {:halt, {w, h}}
-        {{w, y}, {w, h}} -> {[{w, y}], {{0, y + 1}, {w, h}}}
-        {{x, y}, {w, h}} -> {[{x, y}], {{x + 1, y}, {w, h}}}
-      end,
-      fn _ -> :ok end
-    )
-  end
 
   # GenServer replies
 
@@ -282,6 +249,6 @@ defmodule Inky do
 
   defp push(push_policy, state) do
     hm = state.hal_mod
-    hm.handle_update(state.pixels, state.border, push_policy, state.hal_state)
+    hm.handle_update(state.pixel_data, state.border, push_policy, state.hal_state)
   end
 end

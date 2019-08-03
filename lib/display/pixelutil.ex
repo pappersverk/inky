@@ -3,79 +3,67 @@ defmodule Inky.PixelUtil do
   PixelUtil maps pixels to bitstrings to be sent to an Inky screen
   """
 
-  def pixels_to_bits(pixels, width, height, rotation_degrees) do
-    n_r = normalised_rotation(rotation_degrees)
-    {outer_axis, dimension_vectors} = rotation_opts(n_r)
-    ranges = rotated_ranges(dimension_vectors, width, height)
+  require Logger
 
-    pixel_generator =
-      if outer_axis == :x,
-        do: &pixels[pixel_key_x(&1, &2)],
-        else: &pixels[pixel_key_y(&1, &2)]
+  def pixels_to_bits(pixel_data, width, height) do
+    {flip_axes, dimension_vectors} = rotation_opts(pixel_data.rotation)
+    {x_range, y_range} = rotated_axes(dimension_vectors, width, height)
+    {x_range, y_range} = if flip_axes, do: {y_range, x_range}, else: {x_range, y_range}
 
-    {
-      do_pixels_to_bits(ranges, pixel_generator, &black_pixel_bit/1),
-      do_pixels_to_bits(ranges, pixel_generator, &accent_pixel_bit/1)
-    }
-  end
+    Inky.PixelStream.stream_points(x_range, y_range)
+    |> Stream.map(fn {x, y} ->
+      color =
+        if flip_axes,
+          do: compute_pixel_color(pixel_data, {y, x}, width, height),
+          else: compute_pixel_color(pixel_data, {x, y}, width, height)
 
-  @doc """
-  Only exposed for testing purposes. Do not use.
-
-      iex> Enum.map(
-      ...>     [-360, -270, -180, -90, 0, 90, 180, 270, 360, 450],
-      ...>     &Inky.PixelUtil.normalised_rotation/1
-      ...> )
-      [0, 1, 2, 3, 0, 1, 2, 3, 0, 1]
-  """
-  def normalised_rotation(degrees) do
-    r = degrees |> div(90) |> rem(4)
-    if(r < 0, do: r + 4, else: r)
+      # Logger.debug("#{inspect({x, y})} : #{inspect(flip_axes)} => #{inspect(color)}")
+      color
+    end)
+    |> Stream.map(&{black_bit(&1), accent_bit(&1)})
+    |> Enum.reduce({<<>>, <<>>}, &pixel_bit_reducer/2)
   end
 
   @doc """
   Only exposed for testing purposes. Do not use.
 
       iex> Enum.map([3, 1, 2, 0], &Inky.PixelUtil.rotation_opts/1)
-      [{:x, {{:x, -1}, {:y, 1}}},
-       {:x, {{:x, 1}, {:y, -1}}},
-       {:y, {{:y, -1}, {:x, -1}}},
-       {:y, {{:y, 1}, {:x, 1}}}]
+      [{true, {{:x, :dec}, {:y, :inc}}},
+       {true, {{:x, :inc}, {:y, :dec}}},
+       {false, {{:x, :dec}, {:y, :dec}}},
+       {false, {{:x, :inc}, {:y, :inc}}}]
   """
-  def rotation_opts(rotation) do
-    case rotation do
-      3 -> {:x, {{:x, -1}, {:y, 1}}}
-      1 -> {:x, {{:x, 1}, {:y, -1}}}
-      2 -> {:y, {{:y, -1}, {:x, -1}}}
-      0 -> {:y, {{:y, 1}, {:x, 1}}}
-    end
-  end
+  def rotation_opts(3), do: {true, {{:x, :dec}, {:y, :inc}}}
+  def rotation_opts(1), do: {true, {{:x, :inc}, {:y, :dec}}}
+  def rotation_opts(2), do: {false, {{:x, :dec}, {:y, :dec}}}
+  def rotation_opts(0), do: {false, {{:x, :inc}, {:y, :inc}}}
 
-  defp rotated_ranges({i_spec, j_spec}, i_n, j_m) do
-    {
-      rotated_dimension(i_n, j_m, i_spec),
-      rotated_dimension(i_n, j_m, j_spec)
+  defp rotated_axes({x_spec, y_spec}, width, height),
+    do: {
+      rotated_dimension(width, height, x_spec),
+      rotated_dimension(width, height, y_spec)
     }
-  end
 
-  defp rotated_dimension(width, _height, {:x, 1}), do: 0..(width - 1)
-  defp rotated_dimension(width, _height, {:x, -1}), do: (width - 1)..0
-  defp rotated_dimension(_width, height, {:y, 1}), do: 0..(height - 1)
-  defp rotated_dimension(_width, height, {:y, -1}), do: (height - 1)..0
+  defp rotated_dimension(width, _height, {:x, :inc}), do: 0..(width - 1)
+  defp rotated_dimension(width, _height, {:x, :dec}), do: (width - 1)..0
+  defp rotated_dimension(_width, height, {:y, :inc}), do: 0..(height - 1)
+  defp rotated_dimension(_width, height, {:y, :dec}), do: (height - 1)..0
 
-  defp black_pixel_bit(:black), do: 0
-  defp black_pixel_bit(_), do: 1
+  defp compute_pixel_color(pixel_data, key = {x, y}, w, h),
+    do:
+      (pixel_data.overlay || %{})[key] ||
+        (pixel_data.painter && pixel_data.painter.(x, y, w, h)) ||
+        :black
 
-  defp accent_pixel_bit(accent) when accent in [:accent, :red, :yellow], do: 1
-  defp accent_pixel_bit(_), do: 0
+  defp black_bit(:black), do: <<0::1>>
+  defp black_bit(_), do: <<1::1>>
 
-  defp do_pixels_to_bits({i_range, j_range}, pixel_picker, cmap) do
-    for i <- i_range,
-        j <- j_range,
-        do: <<cmap.(pixel_picker.(i, j))::size(1)>>,
-        into: <<>>
-  end
+  defp accent_bit(accent) when accent in [:accent, :red, :yellow], do: <<1::1>>
+  defp accent_bit(_), do: <<0::1>>
 
-  defp pixel_key_x(i, j), do: {i, j}
-  defp pixel_key_y(i, j), do: {j, i}
+  defp pixel_bit_reducer({bw_bit, accent_bit}, {bw_bits, accent_bits}),
+    do: {
+      <<bw_bits::bitstring, bw_bit::bits-1>>,
+      <<accent_bits::bitstring, accent_bit::bits-1>>
+    }
 end

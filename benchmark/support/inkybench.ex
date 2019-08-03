@@ -6,11 +6,11 @@ defmodule Inky.InkyBench do
   def run(opts) do
     for _ <- 0..opts[:runs] do
       {:ok, state} = Inky.init([:phat, :red, [hal_mod: Inky.BenchHAL]])
-      Inky.handle_call({:set_pixels, &painter/5, %{}}, nil, state)
+      Inky.handle_call({:set_pixels, &painter/4, %{}}, nil, state)
     end
   end
 
-  defp painter(x, y, w, h, _pixels_so_far) do
+  defp painter(x, y, w, h) do
     {wh, hh} = painter_params(x, y, w, h)
     x_even = is_even(x)
     painter_color(wh, hh, x_even)

@@ -43,12 +43,12 @@ defmodule Inky.RpiHAL do
   end
 
   @impl HAL
-  def handle_update(pixels, border, push_policy, state = %State{}) do
+  def handle_update(pixel_data, border, push_policy, state = %State{}) do
     reset(state)
     soft_reset(state)
 
     case pre_update(state, push_policy) do
-      :cont -> do_update(pixels, border, state)
+      :cont -> do_update(pixel_data, border, state)
       :halt -> {:error, :device_busy}
     end
   end
@@ -69,11 +69,11 @@ defmodule Inky.RpiHAL do
     end
   end
 
-  defp do_update(pixels, border, state) do
+  defp do_update(pixel_data, border, state) do
     display = state.display
     d_pd = display.packed_dimensions
-    display = %Display{width: w, height: h, rotation: r} = state.display
-    {buf_black, buf_accent} = PixelUtil.pixels_to_bits(pixels, w, h, r)
+    display = %Display{width: w, height: h} = state.display
+    {buf_black, buf_accent} = PixelUtil.pixels_to_bits(pixel_data, w, h)
 
     state
     |> set_analog_block_control()

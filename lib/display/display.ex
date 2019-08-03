@@ -53,6 +53,18 @@ defmodule Inky.Display do
     }
   end
 
+  def spec_for(type = :test_big, accent) do
+    %__MODULE__{
+      type: type,
+      width: 5,
+      height: 3,
+      packed_dimensions: packed_dimensions(type, 5, 3),
+      rotation: 0,
+      accent: accent,
+      luts: "luts"
+    }
+  end
+
   defp packed_dimensions(type, width, height),
     do: %{
       width: packed_width(type, width, height),
@@ -63,6 +75,7 @@ defmodule Inky.Display do
     columns =
       case type do
         :what -> width
+        :test_big -> width
         :phat -> height
         :test_small -> height
       end
@@ -74,6 +87,7 @@ defmodule Inky.Display do
     rows =
       case type do
         :what -> height
+        :test_big -> height
         :phat -> width
         :test_small -> width
       end

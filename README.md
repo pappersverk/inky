@@ -48,7 +48,7 @@ config in init, adjust accordingly):
 # Start your Inky process ...
 {:ok, pid} = Inky.start_link(:phat, :red, %{name: InkySample})
 
-painter = fn x, y, w, h, _pixels_so_far ->
+painter = fn x, y, w, h ->
   wh = w / 2
   hh = h / 2
 
@@ -63,5 +63,5 @@ end
 Inky.set_pixels(InkySample, painter, border: :white)
 
 # Flip a few pixels
-Inky.set_pixels(pid, %{{0,0}: :black, {3,49}: :red, {23, 4}: white})
+Inky.set_pixels(pid, %{{0,0} => :black, {3,49} => :red, {140, 4} => :white})
 ```

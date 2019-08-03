@@ -18,12 +18,13 @@ defmodule Inky.RpiHALTest do
   end
 
   setup_all do
-    pixels =
-      :phat
-      |> Display.spec_for()
-      |> init_pixels()
+    display = Display.spec_for(:phat)
 
-    %{pixels: pixels}
+    pixel_data =
+      Inky.PixelData.new(display.rotation)
+      |> Inky.PixelData.update(init_pixels(display))
+
+    %{pixel_data: pixel_data}
   end
 
   describe "happy paths" do
@@ -56,7 +57,7 @@ defmodule Inky.RpiHALTest do
       state = RpiHAL.init(init_args)
 
       # act
-      :ok = RpiHAL.handle_update(ctx.pixels, display.accent, :await, state)
+      :ok = RpiHAL.handle_update(ctx.pixel_data, display.accent, :await, state)
 
       # assert
       assert_received {:init, init_args}
@@ -81,7 +82,7 @@ defmodule Inky.RpiHALTest do
       state = RpiHAL.init(init_args)
 
       # act
-      :ok = RpiHAL.handle_update(ctx.pixels, display.accent, :await, state)
+      :ok = RpiHAL.handle_update(ctx.pixel_data, display.accent, :await, state)
 
       # assert
       assert_received {:init, init_args}
@@ -111,11 +112,11 @@ defmodule Inky.RpiHALTest do
       black_state = RpiHAL.init(init_black)
 
       # black accent, black border
-      :ok = RpiHAL.handle_update(ctx.pixels, :black, :await, black_state)
+      :ok = RpiHAL.handle_update(ctx.pixel_data, :black, :await, black_state)
       assert get_border_command() == [send_command: {60, 0}]
 
       # black accent, white border
-      :ok = RpiHAL.handle_update(ctx.pixels, :white, :await, black_state)
+      :ok = RpiHAL.handle_update(ctx.pixel_data, :white, :await, black_state)
       assert get_border_command() == [send_command: {60, 49}]
     end
 
@@ -126,11 +127,11 @@ defmodule Inky.RpiHALTest do
       red_state = RpiHAL.init(init_red)
 
       # act, explicit border
-      :ok = RpiHAL.handle_update(ctx.pixels, :red, :await, red_state)
+      :ok = RpiHAL.handle_update(ctx.pixel_data, :red, :await, red_state)
       assert get_border_command() == [send_command: {60, 115}]
 
       # act, implicit border
-      :ok = RpiHAL.handle_update(ctx.pixels, :accent, :await, red_state)
+      :ok = RpiHAL.handle_update(ctx.pixel_data, :accent, :await, red_state)
       assert get_border_command() == [send_command: {60, 115}]
     end
 
@@ -141,11 +142,11 @@ defmodule Inky.RpiHALTest do
       yellow_state = RpiHAL.init(init_yellow)
 
       # act, explicit border
-      :ok = RpiHAL.handle_update(ctx.pixels, :yellow, :await, yellow_state)
+      :ok = RpiHAL.handle_update(ctx.pixel_data, :yellow, :await, yellow_state)
       assert get_border_command() == [send_command: {60, 51}]
 
       # act, implicit border
-      :ok = RpiHAL.handle_update(ctx.pixels, :accent, :await, yellow_state)
+      :ok = RpiHAL.handle_update(ctx.pixel_data, :accent, :await, yellow_state)
       assert get_border_command() == [send_command: {60, 51}]
     end
 

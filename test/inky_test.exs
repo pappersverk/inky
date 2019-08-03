@@ -39,7 +39,7 @@ defmodule Inky.InkyTest do
       pixels = %{{0, 0} => :black, {2, 3} => :red}
       {:reply, :ok, state} = Inky.handle_call({:set_pixels, pixels, %{}}, :from, is)
       TestHAL.assert_expectations()
-      assert state.pixels == pixels
+      assert state.pixel_data.overlay == pixels
     end
 
     test "update pixel data when already set", %{inited_state: is} do
@@ -49,7 +49,7 @@ defmodule Inky.InkyTest do
       pixels = %{{1, 2} => :white}
       {:reply, :ok, state} = Inky.handle_call({:set_pixels, pixels, %{}}, :from, state)
       TestHAL.assert_expectations()
-      assert state.pixels == %{{1, 2} => :white, {0, 0} => :black, {2, 3} => :red}
+      assert state.pixel_data.overlay == %{{1, 2} => :white, {0, 0} => :black, {2, 3} => :red}
     end
 
     # TODO: painter tests
