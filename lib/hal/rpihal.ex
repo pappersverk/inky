@@ -33,7 +33,10 @@ defmodule Inky.RpiHAL do
   def init(args) do
     display = args[:display] || raise(ArgumentError, message: ":display missing in args")
     io_mod = args[:io_mod] || @default_io_mod
+
     io_args = args[:io_args] || []
+    io_args = if :gpio_mod not in io_args, do: [gpio_mod: Circuits.GPIO] ++ io_args, else: io_args
+    io_args = if :spi_mod not in io_args, do: [spi_mod: Circuits.SPI] ++ io_args, else: io_args
 
     %State{
       display: display,

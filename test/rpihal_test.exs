@@ -37,7 +37,8 @@ defmodule Inky.RpiHALTest do
       })
 
       # assert
-      assert_received {:init, []}
+      assert_received {:init, [spi_mod: Circuits.SPI, gpio_mod: Circuits.GPIO]}
+      refute_receive _
     end
 
     test "that update dispatches properly when the device is never busy", ctx do
