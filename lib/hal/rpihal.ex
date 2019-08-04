@@ -167,6 +167,7 @@ defmodule Inky.RpiHAL do
 
   defp configure_if_yellow(state, _), do: state
 
+  # Set voltage of VSH and VSL on red device
   defp configure_if_red_what(state, :red, :what),
     do: write_command(state, 0x04, <<0x30, 0xAC, 0x22>>)
 
