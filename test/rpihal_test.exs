@@ -37,7 +37,8 @@ defmodule Inky.RpiHALTest do
       })
 
       # assert
-      assert_received {:init, []}
+      assert_received {:init, [spi_mod: Circuits.SPI, gpio_mod: Circuits.GPIO]}
+      refute_receive _
     end
 
     test "that update dispatches properly when the device is never busy", ctx do
@@ -97,6 +98,13 @@ defmodule Inky.RpiHALTest do
       end)
     end
 
+    defp get_vhs_and_vhl_voltage_command() do
+      Enum.filter(gather_messages(), fn
+        {:send_command, {0x04, _}} -> true
+        _ -> false
+      end)
+    end
+
     test "test border, black accent", ctx do
       display = Display.spec_for(:phat)
       init_black = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
@@ -139,6 +147,36 @@ defmodule Inky.RpiHALTest do
       # act, implicit border
       :ok = RpiHAL.handle_update(ctx.pixels, :accent, :await, yellow_state)
       assert get_border_command() == [send_command: {60, 51}]
+    end
+
+    test "yellow display, what", ctx do
+      # arrange
+      display = Display.spec_for(:what, :yellow)
+      init_red = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
+      red_state = RpiHAL.init(init_red)
+
+      :ok = RpiHAL.handle_update(ctx.pixels, :accent, :await, red_state)
+      assert get_vhs_and_vhl_voltage_command() == [send_command: {0x04, 0x07}]
+    end
+
+    test "yellow display, phat", ctx do
+      # arrange
+      display = Display.spec_for(:phat, :yellow)
+      init_red = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
+      red_state = RpiHAL.init(init_red)
+
+      :ok = RpiHAL.handle_update(ctx.pixels, :accent, :await, red_state)
+      assert get_vhs_and_vhl_voltage_command() == [send_command: {0x04, 0x07}]
+    end
+
+    test "red accent, what display", ctx do
+      # arrange
+      display = Display.spec_for(:what, :red)
+      init_red = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
+      red_state = RpiHAL.init(init_red)
+
+      :ok = RpiHAL.handle_update(ctx.pixels, :red, :await, red_state)
+      assert get_vhs_and_vhl_voltage_command() == [send_command: {0x04, <<0x30, 0xAC, 0x22>>}]
     end
   end
 end

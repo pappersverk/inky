@@ -33,7 +33,10 @@ defmodule Inky.RpiHAL do
   def init(args) do
     display = args[:display] || raise(ArgumentError, message: ":display missing in args")
     io_mod = args[:io_mod] || @default_io_mod
+
     io_args = args[:io_args] || []
+    io_args = if :gpio_mod in io_args, do: io_args, else: [gpio_mod: Circuits.GPIO] ++ io_args
+    io_args = if :spi_mod in io_args, do: io_args, else: [spi_mod: Circuits.SPI] ++ io_args
 
     %State{
       display: display,
@@ -88,6 +91,7 @@ defmodule Inky.RpiHAL do
     |> vcom_register()
     |> set_border_color(border)
     |> configure_if_yellow(display.accent)
+    |> configure_if_red_what(display.accent, display.type)
     |> set_luts(display.luts)
     |> set_dimensions(d_pd.width, d_pd.height)
     |> push_pixel_data_bw(buf_black)
@@ -158,14 +162,16 @@ defmodule Inky.RpiHAL do
     write_command(state, 0x3C, border_data)
   end
 
-  defp configure_if_yellow(state, accent) do
-    # Set voltage of VSH and VSL on Yellow device
-    if accent == :yellow do
-      write_command(state, 0x04, 0x07)
-    else
-      state
-    end
-  end
+  # Set voltage of VSH and VSL on Yellow device
+  defp configure_if_yellow(state, :yellow), do: write_command(state, 0x04, 0x07)
+
+  defp configure_if_yellow(state, _), do: state
+
+  # Set voltage of VSH and VSL on red device
+  defp configure_if_red_what(state, :red, :what),
+    do: write_command(state, 0x04, <<0x30, 0xAC, 0x22>>)
+
+  defp configure_if_red_what(state, _, _), do: state
 
   defp set_luts(state, luts), do: write_command(state, 0x32, luts)
 
