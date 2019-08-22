@@ -6,22 +6,33 @@ defmodule Inky.PixelUtil do
   require Logger
 
   def pixels_to_bits(pixel_data, width, height) do
+    start = :erlang.timestamp()
     {flip_axes, dimension_vectors} = rotation_opts(pixel_data.rotation)
     {x_range, y_range} = rotated_axes(dimension_vectors, width, height)
     {x_range, y_range} = if flip_axes, do: {y_range, x_range}, else: {x_range, y_range}
+    opts_end = :erlang.timestamp()
 
-    Inky.PixelStream.stream_points(x_range, y_range)
-    |> Stream.map(fn {x, y} ->
-      color =
-        if flip_axes,
-          do: compute_pixel_color(pixel_data, {y, x}, width, height),
-          else: compute_pixel_color(pixel_data, {x, y}, width, height)
+    result =
+      Inky.PixelStream.stream_points(x_range, y_range)
+      |> Stream.map(fn {x, y} ->
+        color =
+          if flip_axes,
+            do: compute_pixel_color(pixel_data, {y, x}, width, height),
+            else: compute_pixel_color(pixel_data, {x, y}, width, height)
 
-      # Logger.debug("#{inspect({x, y})} : #{inspect(flip_axes)} => #{inspect(color)}")
-      color
-    end)
-    |> Stream.map(&{black_bit(&1), accent_bit(&1)})
-    |> Enum.reduce({<<>>, <<>>}, &pixel_bit_reducer/2)
+        # Logger.debug("#{inspect({x, y})} : #{inspect(flip_axes)} => #{inspect(color)}")
+        color
+      end)
+      |> Stream.map(&{black_bit(&1), accent_bit(&1)})
+      |> Enum.reduce({<<>>, <<>>}, &pixel_bit_reducer/2)
+
+    conversion_end = :erlang.timestamp()
+    opts_duration = :timer.now_diff(opts_end, start)
+    conversion_duration = :timer.now_diff(conversion_end, opts_end)
+
+    Logger.debug("pixels_to_bits: opts=#{opts_duration} µS conv=#{conversion_duration} µS")
+
+    result
   end
 
   @doc """

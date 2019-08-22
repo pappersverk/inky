@@ -42,10 +42,17 @@ defmodule Inky.RpiHAL do
     }
   end
 
+  require Logger
+
   @impl HAL
   def handle_update(pixel_data, border, push_policy, state = %State{}) do
-    reset(state)
-    soft_reset(state)
+    {reset_time, _} =
+      :timer.tc(fn ->
+        reset(state)
+        soft_reset(state)
+      end)
+
+    Logger.debug("RpiHAL reset-times for update: #{reset_time} µS")
 
     case pre_update(state, push_policy) do
       :cont -> do_update(pixel_data, border, state)
@@ -69,34 +76,79 @@ defmodule Inky.RpiHAL do
     end
   end
 
+  require Logger
+
+  defp clock_start(x) do
+    now = :erlang.timestamp()
+    Process.put(:"$clock_start", now)
+    Process.put(:"$clock_step_start", now)
+    Process.put(:"$clock_steps", [])
+
+    x
+  end
+
+  defp clock_step(x, tag) do
+    now = :erlang.timestamp()
+
+    step_start = Process.get(:"$clock_step_start")
+    steps = Process.get(:"$clock_steps", [])
+    Process.put(:"$clock_steps", [{tag, :timer.now_diff(now, step_start)} | steps])
+    Process.put(:"$clock_step_start", now)
+
+    x
+  end
+
+  defp clock_read(), do: Process.get(:"$clock_steps") |> Enum.reverse()
+
   defp do_update(pixel_data, border, state) do
     display = state.display
     d_pd = display.packed_dimensions
     display = %Display{width: w, height: h} = state.display
-    {buf_black, buf_accent} = PixelUtil.pixels_to_bits(pixel_data, w, h)
+    # {buf_black, buf_accent} = PixelUtil.pixels_to_bits(pixel_data, w, h)
 
-    state
-    |> set_analog_block_control()
-    |> set_digital_block_control()
-    |> set_gate(d_pd.height)
-    |> set_gate_driving_voltage()
-    |> dummy_line_period()
-    |> set_gate_line_width()
-    |> set_data_entry_mode()
-    |> power_on()
-    |> vcom_register()
-    |> set_border_color(border)
-    |> configure_if_yellow(display.accent)
-    |> configure_if_red_what(display.accent, display.type)
-    |> set_luts(display.luts)
-    |> set_dimensions(d_pd.width, d_pd.height)
-    |> push_pixel_data_bw(buf_black)
-    |> push_pixel_data_ry(buf_accent)
-    |> display_update_sequence()
-    |> trigger_display_update()
-    |> sleep(50)
-    |> await_device()
-    |> deep_sleep()
+    {time, {buf_black, buf_accent}} =
+      :timer.tc(fn -> PixelUtil.pixels_to_bits(pixel_data, w, h) end)
+
+    Logger.debug("PixelUtil.pixels_to_bits/3: #{time} µS")
+
+    {time_hw, _} =
+      :timer.tc(fn ->
+        state
+        |> clock_start()
+        |> set_analog_block_control()
+        |> set_digital_block_control()
+        |> set_gate(d_pd.height)
+        |> set_gate_driving_voltage()
+        |> dummy_line_period()
+        |> set_gate_line_width()
+        |> set_data_entry_mode()
+        |> power_on()
+        |> vcom_register()
+        |> set_border_color(border)
+        |> configure_if_yellow(display.accent)
+        |> configure_if_red_what(display.accent, display.type)
+        |> clock_step(:preamble)
+        |> set_luts(display.luts)
+        |> clock_step(:set_luts)
+        |> set_dimensions(d_pd.width, d_pd.height)
+        |> clock_step(:set_dimensions)
+        |> push_pixel_data_bw(buf_black)
+        |> clock_step(:push_bw)
+        |> push_pixel_data_ry(buf_accent)
+        |> clock_step(:push_accent)
+        |> display_update_sequence()
+        |> clock_step(:update_sequence)
+        |> trigger_display_update()
+        |> clock_step(:trigger_update)
+        |> sleep(50)
+        |> clock_step(:sleep_50)
+        |> await_device()
+        |> clock_step(:await)
+        |> deep_sleep()
+        |> clock_step(:deep_sleep)
+      end)
+
+    Logger.debug("RpiHAL hw comms: #{time_hw} µS\n#{inspect(clock_read(), pretty: true)}")
 
     :ok
   end

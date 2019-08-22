@@ -156,7 +156,7 @@ defmodule Inky.RpiHALTest do
       init_red = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
       red_state = RpiHAL.init(init_red)
 
-      :ok = RpiHAL.handle_update(ctx.pixels, :accent, :await, red_state)
+      :ok = RpiHAL.handle_update(ctx.pixel_data, :accent, :await, red_state)
       assert get_vhs_and_vhl_voltage_command() == [send_command: {0x04, 0x07}]
     end
 
@@ -166,7 +166,7 @@ defmodule Inky.RpiHALTest do
       init_red = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
       red_state = RpiHAL.init(init_red)
 
-      :ok = RpiHAL.handle_update(ctx.pixels, :accent, :await, red_state)
+      :ok = RpiHAL.handle_update(ctx.pixel_data, :accent, :await, red_state)
       assert get_vhs_and_vhl_voltage_command() == [send_command: {0x04, 0x07}]
     end
 
@@ -176,7 +176,7 @@ defmodule Inky.RpiHALTest do
       init_red = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
       red_state = RpiHAL.init(init_red)
 
-      :ok = RpiHAL.handle_update(ctx.pixels, :red, :await, red_state)
+      :ok = RpiHAL.handle_update(ctx.pixel_data, :red, :await, red_state)
       assert get_vhs_and_vhl_voltage_command() == [send_command: {0x04, <<0x30, 0xAC, 0x22>>}]
     end
   end

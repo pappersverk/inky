@@ -35,6 +35,11 @@ defmodule Inky do
   #
 
   @doc """
+  Helper function to start Inky from a supervisor spec
+  """
+  def start_link([type, accent, opts]), do: start_link(type, accent, opts)
+
+  @doc """
   Start an Inky GenServer for a display of type `type`, with the color `accent`
   using the optionally provided options `opts`.
 
