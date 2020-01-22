@@ -4,7 +4,7 @@ defmodule Inky.MixProject do
   def project do
     [
       app: :inky,
-      version: "1.0.0",
+      version: "1.0.1",
       elixir: "~> 1.8",
       start_permanent: Mix.env() == :prod,
       source_url: "https://github.com/pappersverk/inky/",
