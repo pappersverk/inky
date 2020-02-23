@@ -27,7 +27,7 @@ is in the works, check it out, to follow how it is progressing.
 Inky is available on Hex. Add inky to your mix.exs deps:
 
 ```elixir
-{:inky, "~> 1.0.0"},
+{:inky, "~> 1.0.1"},
 ```
 
 Run `mix deps.get` to get the new dep.
