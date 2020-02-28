@@ -4,6 +4,8 @@ defmodule Inky.Display do
   """
 
   alias Inky.LookupTables
+  
+  @type t() :: %__MODULE__{}
 
   @enforce_keys [:type, :width, :height, :packed_dimensions, :rotation, :accent, :luts]
   defstruct type: nil,
