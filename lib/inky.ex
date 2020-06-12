@@ -2,6 +2,7 @@ defmodule Inky do
   @moduledoc """
   The Inky module provides the public API for interacting with the display.
   """
+  @behaviour SimpleDisplay
 
   use GenServer
 
@@ -126,6 +127,13 @@ defmodule Inky do
   end
 
   @doc """
+  Get display information.
+  """
+  def display_info(pid) do
+    GenServer.call(pid, :display_info)
+  end
+
+  @doc """
   Stops `server`.
 
   Returns `:ok`.
@@ -174,6 +182,11 @@ defmodule Inky do
 
   def handle_call(:push, _from, state) do
     {:reply, push(:await, state), state}
+  end
+
+  def handle_call(:display_info, _from, state) do
+    %{display: display} = state
+    {:reply, {:ok, display}, state}
   end
 
   def handle_call(request, from, state) do

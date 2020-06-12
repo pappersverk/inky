@@ -26,12 +26,13 @@ defmodule Inky.MixProject do
     [
       {:circuits_gpio, "~> 0.4"},
       {:circuits_spi, "~> 0.1"},
+      {:simple_display, git: "https://github.com/pappersverk/simple_display_standard.git"},
       {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end
 
-  defp docs() do
+  defp docs do
     [
       main: Inky,
       extras: [
@@ -42,7 +43,7 @@ defmodule Inky.MixProject do
     ]
   end
 
-  defp package() do
+  defp package do
     [
       name: "inky",
       description:
