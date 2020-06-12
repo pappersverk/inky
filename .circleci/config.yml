@@ -6,7 +6,7 @@ jobs:
   build:
     docker:
       # specify the version here
-      - image: circleci/elixir:1.8
+      - image: circleci/elixir:1.10
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
@@ -16,29 +16,29 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
-      - run: mix local.hex --force  # install Hex locally (without prompt)
+      - run: mix local.hex --force # install Hex locally (without prompt)
 
-      - restore_cache:  # restores saved mix cache
-      # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
-          keys:  # list of cache keys, in decreasing specificity
+      - restore_cache: # restores saved mix cache
+          # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+          keys: # list of cache keys, in decreasing specificity
             - v1-mix-cache-{{ .Branch }}-{{ checksum "mix.lock" }}
             - v1-mix-cache-{{ .Branch }}
             - v1-mix-cache
 
-      - restore_cache:  # restores saved build cache
+      - restore_cache: # restores saved build cache
           keys:
             - v1-build-cache-{{ .Branch }}
             - v1-build-cache
 
-      - run: mix do deps.get, compile  # get updated dependencies & compile them
+      - run: mix do deps.get, compile # get updated dependencies & compile them
 
-      - save_cache:  # generate and store mix cache
+      - save_cache: # generate and store mix cache
           key: v1-mix-cache-{{ .Branch }}-{{ checksum "mix.lock" }}
           paths: ["deps"]
-      - save_cache:  # make another, less specific cache
+      - save_cache: # make another, less specific cache
           key: v1-mix-cache-{{ .Branch }}
           paths: ["deps"]
-      - save_cache:  # you should really save one more cache (just in case)
+      - save_cache: # you should really save one more cache (just in case)
           key: v1-mix-cache
           paths: ["deps"]
       - save_cache: # don't forget to save a *build* cache, too
@@ -51,6 +51,6 @@ jobs:
       - run: mix test
       - run: mix credo -C Inky
 
-      - store_test_results:  # upload junit test results for display in Test Summary
+      - store_test_results: # upload junit test results for display in Test Summary
           # Read more: https://circleci.com/docs/2.0/collect-test-data/
           path: _build/test/lib/inky
