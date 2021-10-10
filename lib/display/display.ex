@@ -16,6 +16,18 @@ defmodule Inky.Display do
             accent: :black,
             luts: <<>>
 
+  @spec spec_for(:impression) :: Inky.Display.t()
+  def spec_for(type = :impression) do
+    %__MODULE__{
+      type: type,
+      width: 600,
+      height: 448,
+      packed_dimensions: nil,
+      rotation: 0,
+      accent: nil,
+    }
+  end
+
   @spec spec_for(:phat_ssd1608 | :phat | :what, :black | :red | :yellow) :: Inky.Display.t()
   def spec_for(type, accent \\ :black)
 
@@ -95,5 +107,32 @@ defmodule Inky.Display do
 
     # Little endian, unsigned short
     <<rows::unsigned-little-integer-16>>
+  end
+
+  # colorsets from pimoroni library
+  defp get_colorset(:desaturated) do
+    [
+      [0, 0, 0],
+      [255, 255, 255],
+      [0, 255, 0],
+      [0, 0, 255],
+      [255, 0, 0],
+      [255, 255, 0],
+      [255, 140, 0],
+      [255, 255, 255]
+    ]
+  end
+
+  defp get_colorset(:saturated) do
+    [
+      [57, 48, 57],
+      [255, 255, 255],
+      [58, 91, 70],
+      [61, 59, 94],
+      [156, 72, 75],
+      [208, 190, 71],
+      [177, 106, 73],
+      [255, 255, 255]
+    ]
   end
 end

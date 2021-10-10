@@ -10,6 +10,7 @@ defmodule Inky do
 
   alias Inky.Display
   alias Inky.RpiHAL
+  alias Inky.Impression.RpiHAL, as: ImpressionHAL
 
   @typedoc "The Inky process name"
   @type name :: atom | {:global, term} | {:via, module, term}
@@ -57,6 +58,11 @@ defmodule Inky do
   def start_link(type, accent, opts \\ %{}) do
     genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
     GenServer.start_link(__MODULE__, [type, accent, opts], genserver_opts)
+  end
+
+  def start_link(type, opts \\ %{}) do
+    genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
+    GenServer.start_link(__MODULE__, [type, opts], genserver_opts)
   end
 
   @doc """
@@ -149,6 +155,23 @@ defmodule Inky do
       end
 
     display = Display.spec_for(type, accent)
+    hal_state = hal_mod.init(%{display: display})
+
+    {:ok,
+     %State{
+       border: border,
+       display: display,
+       hal_mod: hal_mod,
+       hal_state: hal_state
+     }}
+  end
+
+  @impl GenServer
+  def init([:impression = type, opts]) do
+    border = opts[:border] || @default_border
+    hal_mod = opts[:hal_mod] || ImpressionHAL
+
+    display = Display.spec_for(type)
     hal_state = hal_mod.init(%{display: display})
 
     {:ok,
