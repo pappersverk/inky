@@ -85,13 +85,19 @@ defmodule Inky.Impression.RpiHAL do
   @impl HAL
   def handle_update(pixels, border, push_policy, state = %State{}) do
     display = %Display{width: w, height: h, rotation: r} = state.display
-    black_bits = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map_black)
-    accent_bits = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map_accent)
+    # All black buffer?
+    IO.puts("Generating buffer...")
+    buffer = for x <- 0..w, y <- 0..h, into: <<>> do
+      color = floor((0/w)*7)
+      <<color>>
+    end
+    IO.puts("Generated buffer: #{byte_size(buffer)}")
 
+    IO.puts("Resetting device")
     reset(state)
 
     case pre_update(state, push_policy) do
-      :cont -> do_update(state, display, border, black_bits, accent_bits)
+      :cont -> do_update(state, display, border, buffer)
       :halt -> {:error, :device_busy}
     end
   end
@@ -107,45 +113,55 @@ defmodule Inky.Impression.RpiHAL do
 
   defp pre_update(state, :once) do
     case read_busy(state) do
-      0 -> :cont
-      1 -> :halt
+      1 -> :cont
+      0 -> :halt
     end
   end
 
-  defp do_update(state, display, border, buf_black, buf_accent) do
+  defp log(state, msg) do
+    IO.puts(msg)
     state
-    |> set_resolution(display.packed_resolution)
-    |> set_panel()
-    |> set_power()
-    |> set_pll_clock_frequency()
-    |> set_tse_register()
-    |> set_vcom_data_interval_setting(border)
-    |> set_gate_source_data_interval_setting()
-    |> disable_external_flash()
-    |> set_pws_whatever_that_means()
-    # TODO: Continue with update here from https://github.com/pimoroni/inky/blob/master/library/inky/inky_uc8159.py#L311
+  end
 
-    |> set_analog_block_control()
-    |> set_digital_block_control()
-    |> set_gate(d_pd.height)
-    |> set_gate_driving_voltage()
-    |> dummy_line_period()
-    |> set_gate_line_width()
-    |> set_data_entry_mode()
-    |> power_on()
-    |> vcom_register()
-    |> set_border_color(border)
-    |> configure_if_yellow(display.accent)
-    |> configure_if_red_what(display.accent, display.type)
-    |> set_luts(display.luts)
-    |> set_dimensions(d_pd.width, d_pd.height)
-    |> push_pixel_data_bw(buf_black)
-    |> push_pixel_data_ry(buf_accent)
-    |> display_update_sequence()
-    |> trigger_display_update()
-    |> sleep(50)
+  defp do_update(state, display, border, buffer) do
+    state
+    |> log("setting resolution")
+    |> set_resolution(display.packed_resolution)
+    |> log("setting panel")
+    |> set_panel()
+    |> log("setting power")
+    |> set_power()
+    |> log("setting pll")
+    |> set_pll_clock_frequency()
+    |> log("set tse register")
+    |> set_tse_register()
+    |> log("set vcom")
+    |> set_vcom_data_interval_setting(border)
+    |> log("set gate")
+    |> set_gate_source_non_overlap_period()
+    |> log("disable external flash")
+    |> disable_external_flash()
+    |> log("set pws")
+    |> set_pws_whatever_that_means()
+    |> log("power off seq")
+    |> power_off_sequence()
+    |> log("push pixels")
+    |> push_pixel_buffer(buffer)
+    |> log("await")
     |> await_device()
-    |> deep_sleep()
+    |> log("pon")
+    |> pon()
+    |> log("await")
+    |> await_device()
+    |> log("drf")
+    |> drf()
+    |> log("await")
+    |> await_device()
+    |> log("pof")
+    |> pof()
+    |> log("await")
+    |> await_device()
+    |> log("done")
 
     :ok
   end
@@ -175,7 +191,7 @@ defmodule Inky.Impression.RpiHAL do
   # 0b00000100 = Source shift direction, 0 = left, 1 = right (default)
   # 0b00000010 = DC-DC converter, 0 = off, 1 = on
   # 0b00000001 = Soft reset, 0 = Reset, 1 = Normal (Default)
-  defp set_panel(state), do: write_command(state, @psr, [0b11101111, 0x08]
+  defp set_panel(state), do: write_command(state, @psr, [0b11101111, 0x08])
 
   defp set_power(state), do: write_command(state, @pwr, [
     Bitwise.bor(
@@ -216,95 +232,10 @@ defmodule Inky.Impression.RpiHAL do
   defp disable_external_flash(state), do: write_command(state, @dam, 0x00)
   defp set_pws_whatever_that_means(state), do: write_command(state, @pws, 0xAA)
   defp power_off_sequence(state), do: write_command(state, @pfs, 0x00)
-
-  defp set_analog_block_control(state), do: write_command(state, 0x74, 0x54)
-  defp set_digital_block_control(state), do: write_command(state, 0x7E, 0x3B)
-  defp set_gate(state, packed_height), do: write_command(state, 0x01, packed_height <> <<0x00>>)
-  defp set_gate_driving_voltage(state), do: write_command(state, 0x03, [0b10000, 0b0001])
-  defp dummy_line_period(state), do: write_command(state, 0x3A, 0x07)
-  defp set_gate_line_width(state), do: write_command(state, 0x3B, 0x04)
-  # Data entry mode setting 0x03 = X/Y increment
-  defp set_data_entry_mode(state), do: write_command(state, 0x11, 0x03)
-  defp power_on(state), do: write_command(state, 0x04)
-
-  defp vcom_register(state) do
-    # VCOM Register, 0x3c = -1.5v?
-    write_command(state, 0x2C, 0x3C)
-  end
-
-  defp set_border_color(state, border) do
-    accent = state.display.accent
-
-    border_data =
-      case border do
-        # GS Transition Define A + VSS + LUT0
-        :black ->
-          0b00000000
-
-        # Fix Level Define A + VSH2 + LUT3
-        c when c in [:red, :accent] and accent == :red ->
-          0b01110011
-
-        # GS Transition Define A + VSH2 + LUT3
-        c when c in [:yellow, :accent] and accent == :yellow ->
-          0b00110011
-
-        # GS Transition Define A + VSH2 + LUT1
-        :white ->
-          0b00110001
-
-        _ ->
-          raise ArgumentError,
-            message: "Invalid border #{inspect(border)} provided. Accent was #{inspect(accent)}"
-      end
-
-    write_command(state, 0x3C, border_data)
-  end
-
-  # Set voltage of VSH and VSL on Yellow device
-  defp configure_if_yellow(state, :yellow), do: write_command(state, 0x04, 0x07)
-
-  defp configure_if_yellow(state, _), do: state
-
-  # Set voltage of VSH and VSL on red device
-  defp configure_if_red_what(state, :red, :what),
-    do: write_command(state, 0x04, <<0x30, 0xAC, 0x22>>)
-
-  defp configure_if_red_what(state, _, _), do: state
-
-  defp set_luts(state, luts), do: write_command(state, 0x32, luts)
-
-  defp set_dimensions(state, width_data, packed_height) do
-    height_data = <<0, 0>> <> packed_height
-    width_data = <<0>> <> width_data
-
-    state
-    # Set RAM X Start/End
-    |> write_command(0x44, width_data)
-    # Set RAM Y Start/End
-    |> write_command(0x45, height_data)
-  end
-
-  # 0x24 == RAM B/W
-  defp push_pixel_data_bw(state, buffer_black),
-    do: do_push_pixel_data(state, 0x24, buffer_black)
-
-  # 0x26 == RAM Red/Yellow/etc
-  defp push_pixel_data_ry(state, buffer_accent),
-    do: do_push_pixel_data(state, 0x26, buffer_accent)
-
-  defp do_push_pixel_data(state, pixel_cmd, pixel_buffer) do
-    # Set RAM X Pointer start
-    write_command(state, 0x4E, 0x00)
-
-    # Set RAM Y Pointer start
-    write_command(state, 0x4F, <<0x00, 0x00>>)
-    write_command(state, pixel_cmd, pixel_buffer)
-  end
-
-  defp display_update_sequence(state), do: write_command(state, 0x22, 0xC7)
-  defp trigger_display_update(state), do: write_command(state, 0x20)
-  defp deep_sleep(state), do: write_command(state, 0x10, 0x01)
+  defp push_pixel_buffer(state, buffer), do: write_command(state, @dtm1, buffer)
+  defp pon(state), do: write_command(state, @pon)
+  defp drf(state), do: write_command(state, @drf)
+  defp pof(state), do: write_command(state, @pof)
 
   #
   # waiting
@@ -312,11 +243,11 @@ defmodule Inky.Impression.RpiHAL do
 
   defp await_device(state) do
     case read_busy(state) do
-      1 ->
+      0 ->
         sleep(state, 10)
         await_device(state)
 
-      0 ->
+      1 ->
         state
     end
   end

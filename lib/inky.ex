@@ -34,6 +34,18 @@ defmodule Inky do
   #
   # API
   #
+  def impress do
+    {:ok, pid} = start_link(:impression, %{}, name: Inky.Foo)
+    IO.puts("Started...")
+
+    IO.puts("Seting pixels...")
+    set_pixels(Inky.Foo, %{})
+  end
+
+  def start_link(type, opts) when is_map(opts) do
+    genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
+    GenServer.start_link(__MODULE__, [type, opts], genserver_opts)
+  end
 
   @doc """
   Start an Inky GenServer for a display of type `type`, with the color `accent`
@@ -60,10 +72,6 @@ defmodule Inky do
     GenServer.start_link(__MODULE__, [type, accent, opts], genserver_opts)
   end
 
-  def start_link(type, opts \\ %{}) do
-    genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
-    GenServer.start_link(__MODULE__, [type, opts], genserver_opts)
-  end
 
   @doc """
   `set_pixels` sets pixels and draws to the display (or not!), with new pixel

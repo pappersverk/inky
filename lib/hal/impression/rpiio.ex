@@ -17,7 +17,8 @@ defmodule Inky.Impression.RpiIO do
       :busy_pid,
       :dc_pid,
       :reset_pid,
-      :spi_pid
+      :spi_pid,
+      :cs_pid
     ]
 
     @enforce_keys @state_fields
@@ -25,7 +26,7 @@ defmodule Inky.Impression.RpiIO do
   end
 
 
-  @default_palette = [
+  @default_palette [
     [57, 48, 57],
     [255, 255, 255],
     [58, 91, 70],
@@ -41,10 +42,10 @@ defmodule Inky.Impression.RpiIO do
   @dc_pin 22
   @cs0_pin 8
 
-
   @default_pin_mappings %{
     busy_pin: @busy_pin,
     cs0_pin: @cs0_pin,
+    spi: 0,
     dc_pin: @dc_pin,
     reset_pin: @reset_pin
   }
@@ -52,7 +53,7 @@ defmodule Inky.Impression.RpiIO do
   @spi_speed_hz 3000000
   @spi_command 0
   @spi_data 1
-  @spi_chunk_size 4096
+  @spi_chunk_bytes 4096
 
   @resolution %{
     {600, 448} => {600, 448, 0, 0, 0}
@@ -68,11 +69,18 @@ defmodule Inky.Impression.RpiIO do
     spi = opts[:spi_mod] || Inky.TestSPI
     pin_mappings = opts[:pin_mappings] || @default_pin_mappings
 
-    spi_address = "spidev0." <> to_string(pin_mappings[:cs0_pin])
+    spi_address = "spidev0." <> to_string(pin_mappings[:spi])
 
+    IO.inspect(pin_mappings)
+    IO.puts("opening CS pin")
+    {:ok, cs_pid} = gpio.open(pin_mappings[:cs0_pin], :output, initial_value: 1)
+    IO.puts("opening DC pin")
     {:ok, dc_pid} = gpio.open(pin_mappings[:dc_pin], :output, initial_value: 0)
+    IO.puts("opening reset pin")
     {:ok, reset_pid} = gpio.open(pin_mappings[:reset_pin], :output, initial_value: 1)
+    IO.puts("opening busy pin")
     {:ok, busy_pid} = gpio.open(pin_mappings[:busy_pin], :input)
+    IO.puts("opening SPI device")
     {:ok, spi_pid} = spi.open(spi_address, speed_hz: @spi_speed_hz)
 
     # Use binary pattern matching to pull out the ADC counts (low 10 bits)
@@ -83,8 +91,10 @@ defmodule Inky.Impression.RpiIO do
       busy_pid: busy_pid,
       dc_pid: dc_pid,
       reset_pid: reset_pid,
-      spi_pid: spi_pid
+      spi_pid: spi_pid,
+      cs_pid: cs_pid
     }
+    |> IO.inspect(label: "init complete")
   end
 
   @impl InkyIO
@@ -127,12 +137,14 @@ defmodule Inky.Impression.RpiIO do
     do: spi_write(state, data_or_command, :erlang.list_to_binary(values))
 
   defp spi_write(state, data_or_command, value) when is_binary(value) do
+    :ok = gpio_call(state, :write, [state.cs_pid, 0])
     :ok = gpio_call(state, :write, [state.dc_pid, data_or_command])
 
-    case spi_call(state, :transfer, [state.spi_pid, value]) do
+    result = case spi_call(state, :transfer, [state.spi_pid, value]) do
       {:ok, response} -> {:ok, response}
       {:error, :transfer_failed} -> spi_call_chunked(state, value)
     end
+    :ok = gpio_call(state, :write, [state.cs_pid, 1])
   end
 
   defp spi_call_chunked(state, value) do
