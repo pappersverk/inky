@@ -7,11 +7,12 @@ defmodule Inky.Display do
 
   @type t() :: %__MODULE__{}
 
-  @enforce_keys [:type, :width, :height, :packed_dimensions, :rotation, :accent, :luts]
+  @enforce_keys [:type, :width, :height, :rotation, :accent]
   defstruct type: nil,
             width: 0,
             height: 0,
             packed_dimensions: %{},
+            packed_resolution: nil,
             rotation: 0,
             accent: :black,
             luts: <<>>
