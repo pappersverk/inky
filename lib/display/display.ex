@@ -22,7 +22,7 @@ defmodule Inky.Display do
       type: type,
       width: 600,
       height: 448,
-      packed_dimensions: nil,
+      packed_resolution: <<2, 88, 1, 192>>, # I used the struct.pack in Python to generate this
       rotation: 0,
       accent: nil,
     }

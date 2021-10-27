@@ -9,8 +9,45 @@ defmodule Inky.Impression.RpiHAL do
 
   @behaviour Inky.HAL
 
-  @color_map_black %{black: 0, miss: 1}
-  @color_map_accent %{red: 1, yellow: 1, accent: 1, miss: 0}
+  @colors %{
+    :black => 0,
+    :white => 1,
+    :green => 2,
+    :blue => 3,
+    :red => 4,
+    :yellow => 5,
+    :orange => 6,
+    :clean => 7
+  }
+
+  @psr 0x00
+  @pwr 0x01
+  @pof 0x02
+  @pfs 0x03
+  @pon 0x04
+  @btst 0x06
+  @dslp 0x07
+  @dtm1 0x10
+  @dsp 0x11
+  @drf 0x12
+  @ipc 0x13
+  @pll 0x30
+  @tsc 0x40
+  @tse 0x41
+  @tws 0x42
+  @tsr 0x43
+  @cdi 0x50
+  @lpd 0x51
+  @tcon 0x60
+  @tres 0x61
+  @dam 0x65
+  @rev 0x70
+  @flg 0x71
+  @amv 0x80
+  @vv 0x81
+  @vdcs 0x82
+  @pws 0xE3
+  @tsset 0xE5
 
   alias Inky.Display
   alias Inky.HAL
@@ -52,7 +89,6 @@ defmodule Inky.Impression.RpiHAL do
     accent_bits = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map_accent)
 
     reset(state)
-    soft_reset(state)
 
     case pre_update(state, push_policy) do
       :cont -> do_update(state, display, border, black_bits, accent_bits)
@@ -77,9 +113,18 @@ defmodule Inky.Impression.RpiHAL do
   end
 
   defp do_update(state, display, border, buf_black, buf_accent) do
-    d_pd = display.packed_dimensions
-
     state
+    |> set_resolution(display.packed_resolution)
+    |> set_panel()
+    |> set_power()
+    |> set_pll_clock_frequency()
+    |> set_tse_register()
+    |> set_vcom_data_interval_setting(border)
+    |> set_gate_source_data_interval_setting()
+    |> disable_external_flash()
+    |> set_pws_whatever_that_means()
+    # TODO: Continue with update here from https://github.com/pimoroni/inky/blob/master/library/inky/inky_uc8159.py#L311
+
     |> set_analog_block_control()
     |> set_digital_block_control()
     |> set_gate(d_pd.height)
@@ -118,6 +163,60 @@ defmodule Inky.Impression.RpiHAL do
   end
 
   defp soft_reset(state), do: write_command(state, 0x12)
+
+  # >HH struct.pack, so big-endian, unsigned-sort * 2
+  defp set_resolution(state, packed_resolution), do: write_command(state, @tres, packed_resolution)
+
+  # Panel Setting
+  # 0b11000000 = Resolution select, 0b00 = 640x480, our panel is 0b11 = 600x448
+  # 0b00100000 = LUT selection, 0 = ext flash, 1 = registers, we use ext flash
+  # 0b00010000 = Ignore
+  # 0b00001000 = Gate scan direction, 0 = down, 1 = up (default)
+  # 0b00000100 = Source shift direction, 0 = left, 1 = right (default)
+  # 0b00000010 = DC-DC converter, 0 = off, 1 = on
+  # 0b00000001 = Soft reset, 0 = Reset, 1 = Normal (Default)
+  defp set_panel(state), do: write_command(state, @psr, [0b11101111, 0x08]
+
+  defp set_power(state), do: write_command(state, @pwr, [
+    Bitwise.bor(
+      Bitwise.bor(
+        Bitwise.bor(
+          # ??? - not documented in UC8159 datasheet
+          Bitwise.<<<(0x06, 3),
+          # SOURCE_INTERNAL_DC_DC
+          Bitwise.<<<(0x01, 2)
+        ),
+        # GATE_INTERNAL_DC_DC
+        Bitwise.<<<(0x01, 1)
+      ),
+      # LV_SOURCE_INTERNAL_DC_DC
+      0x01
+    ),
+    # VGx_20V
+    0x00,
+    # UC8159_7C
+    0x23,
+    # UC8159_7C
+    0x23
+  ])
+
+  # Set the PLL clock frequency to 50Hz
+  # 0b11000000 = Ignore
+  # 0b00111000 = M
+  # 0b00000111 = N
+  # PLL = 2MHz * (M / N)
+  # PLL = 2MHz * (7 / 4)
+  # PLL = 2,800,000 ???
+  defp set_pll_clock_frequency(state), do: write_command(state, 0x3C)
+
+  defp set_tse_register(state), do: write_command(state, 0x00)
+
+  defp set_vcom_data_interval_setting(state, border), do: write_command(state, @cdi, [Bitwise.bor(Bitwise.<<<(@colors[border], 5), 0x17)])
+  defp set_gate_source_non_overlap_period(state), do: write_command(state, @tcon, 0x22)
+  defp disable_external_flash(state), do: write_command(state, @dam, 0x00)
+  defp set_pws_whatever_that_means(state), do: write_command(state, @pws, 0xAA)
+  defp power_off_sequence(state), do: write_command(state, @pfs, 0x00)
+
   defp set_analog_block_control(state), do: write_command(state, 0x74, 0x54)
   defp set_digital_block_control(state), do: write_command(state, 0x7E, 0x3B)
   defp set_gate(state, packed_height), do: write_command(state, 0x01, packed_height <> <<0x00>>)
