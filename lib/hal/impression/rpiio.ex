@@ -24,16 +24,6 @@ defmodule Inky.Impression.RpiIO do
     defstruct @state_fields
   end
 
-  @colors %{
-    :black => 0,
-    :white => 1,
-    :green => 2,
-    :blue => 3,
-    :red => 4,
-    :yellow => 5,
-    :orange => 6,
-    :clean => 7
-  }
 
   @default_palette = [
     [57, 48, 57],
@@ -51,34 +41,6 @@ defmodule Inky.Impression.RpiIO do
   @dc_pin 22
   @cs0_pin 8
 
-  @psr 0x00
-  @pwr 0x01
-  @pof 0x02
-  @pfs 0x03
-  @pon 0x04
-  @btst 0x06
-  @dslp 0x07
-  @dtm1 0x10
-  @dsp 0x11
-  @drf 0x12
-  @ipc 0x13
-  @pll 0x30
-  @tsc 0x40
-  @tse 0x41
-  @tws 0x42
-  @tsr 0x43
-  @cdi 0x50
-  @lpd 0x51
-  @tcon 0x60
-  @tres 0x61
-  @dam 0x65
-  @rev 0x70
-  @flg 0x71
-  @amv 0x80
-  @vv 0x81
-  @vdcs 0x82
-  @pws 0xE3
-  @tsset 0xE5
 
   @default_pin_mappings %{
     busy_pin: @busy_pin,
@@ -87,7 +49,7 @@ defmodule Inky.Impression.RpiIO do
     reset_pin: @reset_pin
   }
 
-  @spi_speed_hz 488_000
+  @spi_speed_hz 3000000
   @spi_command 0
   @spi_data 1
   @spi_chunk_size 4096
@@ -108,10 +70,8 @@ defmodule Inky.Impression.RpiIO do
 
     spi_address = "spidev0." <> to_string(pin_mappings[:cs0_pin])
 
-    # TODO: Resume straight porting here, up to https://github.com/pimoroni/inky/blob/master/library/inky/inky_uc8159.py#L130
-
-    {:ok, dc_pid} = gpio.open(pin_mappings[:dc_pin], :output)
-    {:ok, reset_pid} = gpio.open(pin_mappings[:reset_pin], :output)
+    {:ok, dc_pid} = gpio.open(pin_mappings[:dc_pin], :output, initial_value: 0)
+    {:ok, reset_pid} = gpio.open(pin_mappings[:reset_pin], :output, initial_value: 1)
     {:ok, busy_pid} = gpio.open(pin_mappings[:busy_pin], :input)
     {:ok, spi_pid} = spi.open(spi_address, speed_hz: @spi_speed_hz)
 
