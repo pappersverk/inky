@@ -54,6 +54,7 @@ defmodule Inky do
 
   See `GenServer.start_link/3` for return values.
   """
+  @spec start_link(Inky.Display.variant(), Inky.Display.accent(), map()) :: GenServer.on_start()
   def start_link(type, accent, opts \\ %{}) do
     genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
     GenServer.start_link(__MODULE__, [type, accent, opts], genserver_opts)

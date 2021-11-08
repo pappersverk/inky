@@ -27,7 +27,7 @@ is in the works, check it out, to follow how it is progressing.
 Inky is available on Hex. Add inky to your mix.exs deps:
 
 ```elixir
-{:inky, "~> 1.0.1"},
+{:inky, "~> 1.0.2"},
 ```
 
 Run `mix deps.get` to get the new dep.
@@ -37,6 +37,27 @@ Run `mix deps.get` to get the new dep.
 A sample for Inky only, both host development and on-device is available as [pappersverk/sample_inky](https://github.com/pappersverk/sample_inky).
 
 A sample for using it with Scenic both for host development and on-device is available as [pappersverk/sample_scenic_inky](https://github.com/pappersverk/sample_scenic_inky).
+
+There are multiple variants of wHAT, pHAT, etc, and they are hard to distinguish.
+You can read the display information from your Inky's EEPROM by invoking `Inky.EEPROM.read/0`.
+
+```elixir
+iex> Inky.EEPROM.read()
+{:ok,
+%Inky.EEPROM{
+  color: :red,
+  display_variant: "Red pHAT (SSD1608)",
+  height: 104,
+  pcb_variant: 12,
+  timestamp: "2021-03-30 08:58:28.9",
+  width: 212
+}}
+```
+
+Particularly the display variant gives you a clue what type of Inky you are
+using, based on which you will determine the options for `Inky.start_link/3`.
+
+`Inky.EEPROM.read/0` works only one time after the display is powered on.
 
 ## Brief example
 
@@ -63,5 +84,5 @@ end
 Inky.set_pixels(InkySample, painter, border: :white)
 
 # Flip a few pixels
-Inky.set_pixels(pid, %{{0,0}: :black, {3,49}: :red, {23, 4}: white})
+Inky.set_pixels(pid, %{{0, 0} => :black, {3, 49} => :red, {23, 4} => :white})
 ```
