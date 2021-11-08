@@ -56,14 +56,15 @@ defmodule Inky.EEPROM do
     end
   end
 
-  # The data might look like this:
-  #
-  #   <<212, 0, 104, 0, 1, 12, 10, 21, 50, 48, 50, 49, 45, 48, 55, 45, 49, 50, 32, 49, 48, 58, 49, 49, 58, 52, 57, 46, 56>>
-  #
-  defp parse_data(
-         <<width, _, height, _, color, pcb_variant, display_variant, _, timestamp::binary>>
-       )
-       when color in 0..5 and display_variant in 0..14 do
+  @doc """
+  Parses data from Inky's EEPROM.
+  """
+  @spec parse_data(<<_::232>>) :: {:ok, t()} | {:error, {:invalid_data, any()}}
+  def parse_data(
+        <<width::little-16, height::little-16, color, pcb_variant, display_variant, _,
+          timestamp::binary>>
+      )
+      when color in 0..5 and display_variant in 0..14 do
     {:ok,
      __struct__(
        width: width,
@@ -75,7 +76,7 @@ defmodule Inky.EEPROM do
      )}
   end
 
-  defp parse_data(data) do
+  def parse_data(data) do
     {:error, {:invalid_data, data}}
   end
 end
