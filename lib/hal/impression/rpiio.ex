@@ -21,7 +21,7 @@ defmodule Inky.Impression.RpiIO do
       :cs_pid
     ]
 
-    @enforce_keys @state_fields
+    @enforce_keys @state_fields -- [:cs_pid]
     defstruct @state_fields
   end
 
@@ -73,8 +73,9 @@ defmodule Inky.Impression.RpiIO do
 
     IO.inspect(pin_mappings)
     IO.puts("opening CS pin")
-    {:ok, cs_pid} = gpio.open(pin_mappings[:cs0_pin], :output, initial_value: 1)
-    IO.puts("opening DC pin")
+    # TODO: This isn't working! Shouldn't this be done via SPI?
+    # {:ok, cs_pid} = gpio.open(pin_mappings[:cs0_pin], :output, initial_value: 1)
+    # IO.puts("opening DC pin")
     {:ok, dc_pid} = gpio.open(pin_mappings[:dc_pin], :output, initial_value: 0)
     IO.puts("opening reset pin")
     {:ok, reset_pid} = gpio.open(pin_mappings[:reset_pin], :output, initial_value: 1)
@@ -92,9 +93,17 @@ defmodule Inky.Impression.RpiIO do
       dc_pid: dc_pid,
       reset_pid: reset_pid,
       spi_pid: spi_pid,
-      cs_pid: cs_pid
+      # cs_pid: cs_pid
     }
     |> IO.inspect(label: "init complete")
+  end
+
+  def setup do
+    # Python library is using BCM numbers for GPIO numbering
+    # https://raspberrypi.stackexchange.com/a/12967
+    # But maybe this is the default for Circuits.GPIO?
+
+    # self._spi_bus.max_speed_hz = 3000000
   end
 
   @impl InkyIO
@@ -137,14 +146,14 @@ defmodule Inky.Impression.RpiIO do
     do: spi_write(state, data_or_command, :erlang.list_to_binary(values))
 
   defp spi_write(state, data_or_command, value) when is_binary(value) do
-    :ok = gpio_call(state, :write, [state.cs_pid, 0])
+    # :ok = gpio_call(state, :write, [state.cs_pid, 0])
     :ok = gpio_call(state, :write, [state.dc_pid, data_or_command])
 
     result = case spi_call(state, :transfer, [state.spi_pid, value]) do
       {:ok, response} -> {:ok, response}
       {:error, :transfer_failed} -> spi_call_chunked(state, value)
     end
-    :ok = gpio_call(state, :write, [state.cs_pid, 1])
+    # :ok = gpio_call(state, :write, [state.cs_pid, 1])
   end
 
   defp spi_call_chunked(state, value) do

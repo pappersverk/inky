@@ -111,6 +111,7 @@ defmodule Inky.Display do
   end
 
   # colorsets from pimoroni library
+  # https://github.com/pimoroni/inky/blob/54684464b2f35bfd52208cdfb922c09685644181/library/inky/inky_uc8159.py#L26-L46
   defp get_colorset(:desaturated) do
     [
       [0, 0, 0],
