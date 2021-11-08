@@ -89,14 +89,18 @@ defmodule Inky.Impression.RpiHAL do
   @impl HAL
   def handle_update(pixels, border, push_policy, state = %State{}) do
     display = %Display{width: w, height: h, rotation: r} = state.display
+    Logger.info("display: #{inspect(display)}")
     # All black buffer?
     IO.puts("Generating buffer...")
 
     buffer =
-      for _x <- 0..w, _y <- 0..h, into: <<>> do
+      for y <- 0..(h - 1), x <- 0..(w - 1), into: <<>> do
+        cond do
+          y > 100 -> <<3>>
+          x > 100 -> <<4>>
+          true -> <<rem(x, @colors[:orange] + 1)>>
+        end
         # color = floor(0 / w * 7)
-        # This generates a vertical bar type pattern.
-        <<1>>
       end
 
     log("Generated buffer: #{byte_size(buffer)}")
