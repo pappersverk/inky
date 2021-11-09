@@ -90,21 +90,21 @@ defmodule Inky.Impression.RpiHAL do
   def handle_update(pixels, border, push_policy, state = %State{}) do
     display = %Display{width: w, height: h, rotation: r} = state.display
     Logger.info("display: #{inspect(display)}")
-    # All black buffer?
     IO.puts("Generating buffer...")
 
     buffer =
       for y <- 0..(h - 1), x <- 0..(w - 1), into: <<>> do
         cond do
-          y > 100 -> <<3>>
-          x > 100 -> <<4>>
-          true -> <<rem(x, @colors[:orange] + 1)>>
+          x > 150 && y > 200 -> <<@colors[:orange]>>
+          x > 100 -> <<@colors[:blue]>>
+          y > 100 -> <<@colors[:green]>>
+          true -> <<rem(y, @colors[:orange] + 1)>>
         end
         # color = floor(0 / w * 7)
       end
 
-    log("Generated buffer: #{byte_size(buffer)}")
-    Logger.info("buffer: #{inspect(buffer)}")
+    log("Generated buffer of size: #{byte_size(buffer)}")
+    log("buffer: #{inspect(buffer)}")
 
     log("Resetting device")
     reset(state)
@@ -142,12 +142,10 @@ defmodule Inky.Impression.RpiHAL do
     state
   end
 
-  # defp do_update(%State{setup?: true}, _, _, _) do
-  #   Logger.info("Already setup")
-  # end
-
   defp do_update(state, display, border, buffer) do
     IO.inspect(buffer, label: "buffer (rpihal.ex:138)")
+    Logger.info("border: #{inspect(border)}")
+    border = :red
 
     state
     |> log("setting resolution")
