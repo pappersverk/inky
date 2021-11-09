@@ -26,7 +26,6 @@ defmodule Inky.MixProject do
     [
       # {:circuits_gpio, "~> 1.0"},
       {:circuits_gpio, "~> 0.4"},
-      {:circuits_spi, "~> 0.1"},
       {:circuits_spi, "~> 1.0"},
       {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: :dev}
