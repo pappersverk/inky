@@ -42,7 +42,7 @@ defmodule Inky do
     IO.puts("Started... #{inspect(pid)}")
 
     IO.puts("Seting pixels...")
-    set_pixels(Inky.Foo, %{})
+    Inky.set_pixels(Inky.Foo, %{})
   end
 
   def start_link(type, opts) when is_list(opts) do
