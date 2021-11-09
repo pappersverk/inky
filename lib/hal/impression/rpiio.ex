@@ -96,14 +96,6 @@ defmodule Inky.Impression.RpiIO do
     |> IO.inspect(label: "init complete")
   end
 
-  def setup do
-    # Python library is using BCM numbers for GPIO numbering
-    # https://raspberrypi.stackexchange.com/a/12967
-    # But maybe this is the default for Circuits.GPIO?
-
-    # self._spi_bus.max_speed_hz = 3000000
-  end
-
   @impl InkyIO
   def handle_sleep(_state, duration_ms) do
     :timer.sleep(duration_ms)

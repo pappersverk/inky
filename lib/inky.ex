@@ -37,7 +37,7 @@ defmodule Inky do
   def go, do: 45
 
   def impress do
-    IO.puts("Starting impression2")
+    IO.puts("Starting impression")
     {:ok, pid} = Inky.start_link(:impression, name: Inky.Foo)
     IO.puts("Started... #{inspect(pid)}")
 
@@ -46,10 +46,7 @@ defmodule Inky do
   end
 
   def start_link(type, opts) when is_list(opts) do
-    IO.inspect(type, label: "type (inky.ex:46)")
-    IO.inspect(opts, label: "opts (inky.ex:47)")
     genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
-    IO.inspect(genserver_opts, label: "genserver_opts (inky.ex:49)")
     GenServer.start_link(__MODULE__, [type, opts], genserver_opts)
   end
 
@@ -158,11 +155,7 @@ defmodule Inky do
   #
 
   @impl GenServer
-  # TODO: Figure out why we're here instead of down below! What start_link is being called?
   def init([type, accent, opts]) do
-    IO.inspect(type, label: "type (inky.ex:162)")
-    IO.inspect(accent, label: "accent (inky.ex:163)")
-    IO.inspect(opts, label: "opts (inky.ex:164)")
     border = opts[:border] || @default_border
     hal_mod = opts[:hal_mod] || RpiHAL
 
