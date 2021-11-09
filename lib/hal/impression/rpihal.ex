@@ -136,7 +136,7 @@ defmodule Inky.Impression.RpiHAL do
     Logger.info(msg)
   end
 
-  defp log(state, msg) when is_binary(msg) do
+  defp log(_state, msg) when is_binary(msg) do
     IO.puts(msg)
     Logger.info(msg)
     state
