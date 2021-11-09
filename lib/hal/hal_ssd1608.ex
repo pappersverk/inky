@@ -15,9 +15,6 @@ defmodule Inky.HAL.PhatSSD1608 do
   @color_map_black %{black: 0, miss: 1}
   @color_map_accent %{red: 1, yellow: 1, accent: 1, miss: 0}
 
-  @cols 136
-  @rows 250
-  @rotation -90
   @lut_data <<0x02, 0x02, 0x01, 0x11, 0x12, 0x12, 0x22, 0x22, 0x66, 0x69, 0x69, 0x59, 0x58, 0x99,
               0x99, 0x88, 0x00, 0x00, 0x00, 0x00, 0xF8, 0xB4, 0x13, 0x51, 0x35, 0x51, 0x51, 0x19,
               0x01, 0x00>>
@@ -71,14 +68,15 @@ defmodule Inky.HAL.PhatSSD1608 do
 
   @impl Inky.HAL
   def handle_update(pixels, border, push_policy, state = %State{}) do
-    black_bits = PixelUtil.pixels_to_bits(pixels, @rows, @cols, @rotation, @color_map_black)
-    accent_bits = PixelUtil.pixels_to_bits(pixels, @rows, @cols, @rotation, @color_map_accent)
+    %{width: width, height: height, rotation: rotation} = state.display
+    black_bits = PixelUtil.pixels_to_bits(pixels, width, height, rotation, @color_map_black)
+    accent_bits = PixelUtil.pixels_to_bits(pixels, width, height, rotation, @color_map_accent)
 
     state |> set_reset(0) |> sleep(500) |> set_reset(1) |> sleep(500)
     state |> write_command(@cmd_soft_reset) |> sleep(1000)
 
     case pre_update(state, push_policy) do
-      :cont -> do_update(state, state.display, border, black_bits, accent_bits)
+      :cont -> do_update(state, border, black_bits, accent_bits)
       :halt -> {:error, :device_busy}
     end
   end
@@ -100,15 +98,17 @@ defmodule Inky.HAL.PhatSSD1608 do
     end
   end
 
-  @spec do_update(State.t(), Inky.Display.t(), atom(), binary(), binary()) :: :ok
-  defp do_update(state, _display, border, black_bits, accent_bits) do
+  @spec do_update(State.t(), atom(), binary(), binary()) :: :ok
+  defp do_update(state, border, black_bits, accent_bits) do
+    %{width: width, height: height} = state.display
+
     state
-    |> write_command(@cmd_set_driver_output, [@rows - 1, (@rows - 1) >>> 8, 0x00])
+    |> write_command(@cmd_set_driver_output, [width - 1, (width - 1) >>> 8, 0x00])
     |> write_command(@cmd_set_dummy_line_period, [0x1B])
     |> write_command(@cmd_set_gate_line_width, [0x0B])
     |> write_command(@cmd_set_data_entry_mode, [0x03])
-    |> write_command(@cmd_set_ram_x_position, [0x00, div(@cols, 8) - 1])
-    |> write_command(@cmd_set_ram_y_position, [0x00, 0x00, @rows - 1, (@rows - 1) >>> 8])
+    |> write_command(@cmd_set_ram_x_position, [0x00, div(height, 8) - 1])
+    |> write_command(@cmd_set_ram_y_position, [0x00, 0x00, width - 1, (width - 1) >>> 8])
     |> write_command(@cmd_write_vcom, [0x70])
     |> write_command(@cmd_write_lut, @lut_data)
     |> set_border_color(border)
