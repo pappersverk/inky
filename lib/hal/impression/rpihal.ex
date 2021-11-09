@@ -17,6 +17,7 @@ defmodule Inky.Impression.RpiHAL do
     :red => 4,
     :yellow => 5,
     :orange => 6,
+    # Not a color, but is used to clear the display
     :clean => 7
   }
 
@@ -49,6 +50,8 @@ defmodule Inky.Impression.RpiHAL do
   @pws 0xE3
   @tsset 0xE5
 
+  require Logger
+
   alias Inky.Display
   alias Inky.HAL
   alias Inky.PixelUtil
@@ -56,7 +59,7 @@ defmodule Inky.Impression.RpiHAL do
   defmodule State do
     @moduledoc false
 
-    @state_fields [:display, :io_mod, :io_state]
+    @state_fields [:display, :io_mod, :io_state, :setup?]
 
     @enforce_keys @state_fields
     defstruct @state_fields
@@ -78,22 +81,32 @@ defmodule Inky.Impression.RpiHAL do
     %State{
       display: display,
       io_mod: io_mod,
-      io_state: io_mod.init(io_args)
+      io_state: io_mod.init(io_args),
+      setup?: false
     }
   end
 
   @impl HAL
   def handle_update(pixels, border, push_policy, state = %State{}) do
     display = %Display{width: w, height: h, rotation: r} = state.display
-    # All black buffer?
+    Logger.info("display: #{inspect(display)}")
     IO.puts("Generating buffer...")
-    buffer = for x <- 0..w, y <- 0..h, into: <<>> do
-      color = floor((0/w)*7)
-      <<color>>
-    end
-    IO.puts("Generated buffer: #{byte_size(buffer)}")
 
-    IO.puts("Resetting device")
+    buffer =
+      for y <- 0..(h - 1), x <- 0..(w - 1), into: <<>> do
+        cond do
+          x > 150 && y > 200 -> <<@colors[:orange]>>
+          x > 100 -> <<@colors[:blue]>>
+          y > 100 -> <<@colors[:green]>>
+          true -> <<rem(y, @colors[:orange] + 1)>>
+        end
+        # color = floor(0 / w * 7)
+      end
+
+    log("Generated buffer of size: #{byte_size(buffer)}")
+    log("buffer: #{inspect(buffer)}")
+
+    log("Resetting device")
     reset(state)
 
     case pre_update(state, push_policy) do
@@ -118,12 +131,22 @@ defmodule Inky.Impression.RpiHAL do
     end
   end
 
-  defp log(state, msg) do
+  defp log(msg) when is_binary(msg) do
     IO.puts(msg)
+    Logger.info(msg)
+  end
+
+  defp log(_state, msg) when is_binary(msg) do
+    IO.puts(msg)
+    Logger.info(msg)
     state
   end
 
   defp do_update(state, display, border, buffer) do
+    IO.inspect(buffer, label: "buffer (rpihal.ex:138)")
+    Logger.info("border: #{inspect(border)}")
+    border = :red
+
     state
     |> log("setting resolution")
     |> set_resolution(display.packed_resolution)
@@ -163,7 +186,7 @@ defmodule Inky.Impression.RpiHAL do
     |> await_device()
     |> log("done")
 
-    :ok
+    {:ok, %State{state | setup?: true}}
   end
 
   #
@@ -181,7 +204,8 @@ defmodule Inky.Impression.RpiHAL do
   defp soft_reset(state), do: write_command(state, 0x12)
 
   # >HH struct.pack, so big-endian, unsigned-sort * 2
-  defp set_resolution(state, packed_resolution), do: write_command(state, @tres, packed_resolution)
+  defp set_resolution(state, packed_resolution),
+    do: write_command(state, @tres, packed_resolution)
 
   # Panel Setting
   # 0b11000000 = Resolution select, 0b00 = 640x480, our panel is 0b11 = 600x448
@@ -193,28 +217,30 @@ defmodule Inky.Impression.RpiHAL do
   # 0b00000001 = Soft reset, 0 = Reset, 1 = Normal (Default)
   defp set_panel(state), do: write_command(state, @psr, [0b11101111, 0x08])
 
-  defp set_power(state), do: write_command(state, @pwr, [
-    Bitwise.bor(
-      Bitwise.bor(
+  defp set_power(state),
+    do:
+      write_command(state, @pwr, [
         Bitwise.bor(
-          # ??? - not documented in UC8159 datasheet
-          Bitwise.<<<(0x06, 3),
-          # SOURCE_INTERNAL_DC_DC
-          Bitwise.<<<(0x01, 2)
+          Bitwise.bor(
+            Bitwise.bor(
+              # ??? - not documented in UC8159 datasheet
+              Bitwise.<<<(0x06, 3),
+              # SOURCE_INTERNAL_DC_DC
+              Bitwise.<<<(0x01, 2)
+            ),
+            # GATE_INTERNAL_DC_DC
+            Bitwise.<<<(0x01, 1)
+          ),
+          # LV_SOURCE_INTERNAL_DC_DC
+          0x01
         ),
-        # GATE_INTERNAL_DC_DC
-        Bitwise.<<<(0x01, 1)
-      ),
-      # LV_SOURCE_INTERNAL_DC_DC
-      0x01
-    ),
-    # VGx_20V
-    0x00,
-    # UC8159_7C
-    0x23,
-    # UC8159_7C
-    0x23
-  ])
+        # VGx_20V
+        0x00,
+        # UC8159_7C
+        0x23,
+        # UC8159_7C
+        0x23
+      ])
 
   # Set the PLL clock frequency to 50Hz
   # 0b11000000 = Ignore
@@ -227,7 +253,9 @@ defmodule Inky.Impression.RpiHAL do
 
   defp set_tse_register(state), do: write_command(state, 0x00)
 
-  defp set_vcom_data_interval_setting(state, border), do: write_command(state, @cdi, [Bitwise.bor(Bitwise.<<<(@colors[border], 5), 0x17)])
+  defp set_vcom_data_interval_setting(state, border),
+    do: write_command(state, @cdi, [Bitwise.bor(Bitwise.<<<(@colors[border], 5), 0x17)])
+
   defp set_gate_source_non_overlap_period(state), do: write_command(state, @tcon, 0x22)
   defp disable_external_flash(state), do: write_command(state, @dam, 0x00)
   defp set_pws_whatever_that_means(state), do: write_command(state, @pws, 0xAA)

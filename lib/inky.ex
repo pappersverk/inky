@@ -34,15 +34,18 @@ defmodule Inky do
   #
   # API
   #
+  def go, do: 45
+
   def impress do
-    {:ok, pid} = start_link(:impression, %{}, name: Inky.Foo)
-    IO.puts("Started...")
+    IO.puts("Starting impression")
+    {:ok, pid} = Inky.start_link(:impression, name: Inky.Foo)
+    IO.puts("Started... #{inspect(pid)}")
 
     IO.puts("Seting pixels...")
-    set_pixels(Inky.Foo, %{})
+    Inky.set_pixels(Inky.Foo, %{})
   end
 
-  def start_link(type, opts) when is_map(opts) do
+  def start_link(type, opts) when is_list(opts) do
     genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
     GenServer.start_link(__MODULE__, [type, opts], genserver_opts)
   end
@@ -71,7 +74,6 @@ defmodule Inky do
     genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
     GenServer.start_link(__MODULE__, [type, accent, opts], genserver_opts)
   end
-
 
   @doc """
   `set_pixels` sets pixels and draws to the display (or not!), with new pixel
@@ -204,7 +206,16 @@ defmodule Inky do
   end
 
   def handle_call(:push, _from, state) do
-    {:reply, push(:await, state), state}
+    result = push(:await, state)
+
+    state =
+      case result do
+        :ok -> state
+        {:error, _} -> state
+        {:ok, state} -> state
+      end
+
+    {:reply, result, state}
   end
 
   def handle_call(request, from, state) do
@@ -216,7 +227,13 @@ defmodule Inky do
 
   @impl GenServer
   def handle_cast(:push, state) do
-    push(:await, state)
+    state =
+      case push(:await, state) do
+        :ok -> state
+        {:error, _} -> state
+        {:ok, state} -> state
+      end
+
     {:noreply, state}
   end
 
@@ -311,7 +328,7 @@ defmodule Inky do
 
   # Internals
 
-  defp push(push_policy, state) when not (push_policy in [:await, :once]), do: push(:await, state)
+  defp push(push_policy, state) when push_policy not in [:await, :once], do: push(:await, state)
 
   defp push(push_policy, state) do
     hm = state.hal_mod
