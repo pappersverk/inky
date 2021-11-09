@@ -18,10 +18,11 @@ defmodule Inky.Impression.RpiIO do
       :dc_pid,
       :reset_pid,
       :spi_pid,
-      :cs_pid
+      # The python library uses a CS pin but we haven't been able to use pin 8 as a CS pin
+      # :cs_pid
     ]
 
-    @enforce_keys @state_fields -- [:cs_pid]
+    @enforce_keys @state_fields
     defstruct @state_fields
   end
 
@@ -72,10 +73,8 @@ defmodule Inky.Impression.RpiIO do
     spi_address = "spidev0." <> to_string(pin_mappings[:spi])
 
     IO.inspect(pin_mappings)
-    IO.puts("opening CS pin")
-    # TODO: This isn't working! Shouldn't this be done via SPI?
-    # {:ok, cs_pid} = gpio.open(pin_mappings[:cs0_pin], :output, initial_value: 1)
-    # IO.puts("opening DC pin")
+    # MAYBE_DO: Open CS pin
+    IO.puts("opening DC pin")
     {:ok, dc_pid} = gpio.open(pin_mappings[:dc_pin], :output, initial_value: 0)
     IO.puts("opening reset pin")
     {:ok, reset_pid} = gpio.open(pin_mappings[:reset_pin], :output, initial_value: 1)
@@ -92,8 +91,7 @@ defmodule Inky.Impression.RpiIO do
       busy_pid: busy_pid,
       dc_pid: dc_pid,
       reset_pid: reset_pid,
-      spi_pid: spi_pid,
-      # cs_pid: cs_pid
+      spi_pid: spi_pid
     }
     |> IO.inspect(label: "init complete")
   end
@@ -146,14 +144,14 @@ defmodule Inky.Impression.RpiIO do
     do: spi_write(state, data_or_command, :erlang.list_to_binary(values))
 
   defp spi_write(state, data_or_command, value) when is_binary(value) do
-    # :ok = gpio_call(state, :write, [state.cs_pid, 0])
+    # MAYBE_DO: Write a 0 to CS pin
     :ok = gpio_call(state, :write, [state.dc_pid, data_or_command])
 
     result = case spi_call(state, :transfer, [state.spi_pid, value]) do
       {:ok, response} -> {:ok, response}
       {:error, :transfer_failed} -> spi_call_chunked(state, value)
     end
-    # :ok = gpio_call(state, :write, [state.cs_pid, 1])
+    # MAYBE_DO: Write a 1 to CS pin
   end
 
   defp spi_call_chunked(state, value) do
