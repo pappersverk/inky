@@ -90,21 +90,31 @@ defmodule Inky.Impression.RpiHAL do
   def handle_update(pixels, border, push_policy, state = %State{}) do
     display = %Display{width: w, height: h, rotation: r} = state.display
     Logger.info("display: #{inspect(display)}")
-    IO.puts("Generating buffer...")
+    IO.puts("Generating buffer2...")
 
+    # I think this buffer is being generated incorrectly
+    # The resolution isn't right
+    # Also only the black is actually solid, it's like black is being interspersed with the other colors
+    # In the python library this is a uint8 which is an unsigned 8-bit integer,
+    # which should be similar to a byte in elixir...
+    # buffer = gen_buf()
     buffer =
       for y <- 0..(h - 1), x <- 0..(w - 1), into: <<>> do
         cond do
-          x > 150 && y > 200 -> <<@colors[:orange]>>
-          x > 100 -> <<@colors[:blue]>>
-          y > 100 -> <<@colors[:green]>>
-          true -> <<rem(y, @colors[:orange] + 1)>>
+          #x > 150 && y > 200 -> <<@colors[:orange]>>
+          # x > 160 -> <<@colors[:black]>>
+          x > 160 -> <<@colors[:blue]::4, @colors[:blue]::4>>
+          # y > 115 -> <<@colors[:green]>>
+          true -> <<@colors[:white]::4, @colors[:white]::4>>
+          # true -> <<rem(y + 1, @colors[:orange] + 1)>>
         end
         # color = floor(0 / w * 7)
+
+        # <<@colors[:yellow]>>
+        # <<7::4,7::4>>
       end
 
-    log("Generated buffer of size: #{byte_size(buffer)}")
-    log("buffer: #{inspect(buffer)}")
+    # log("Generated buffer of size: #{byte_size(buffer)}")
 
     log("Resetting device")
     reset(state)
@@ -113,6 +123,114 @@ defmodule Inky.Impression.RpiHAL do
       :cont -> do_update(state, display, border, buffer)
       :halt -> {:error, :device_busy}
     end
+  end
+
+  def gen_buf do
+    IO.puts("Start generating buffer")
+    w = 600
+    h = 448
+
+    buffer =
+      for y <- 0..(h - 1), x <- 0..(w - 1), into: <<>> do
+        cond do
+          #x > 150 && y > 200 -> <<@colors[:orange]>>
+          # x > 160 -> <<@colors[:black]>>
+          # y > 115 -> <<@colors[:green]>>
+          x > 300 -> <<@colors[:black]>>
+          y > 224 -> <<@colors[:green]>>
+          true -> <<rem(y, @colors[:orange] + 1)>>
+        end
+        # color = floor(0 / w * 7)
+      end
+
+    log("Generated buffer of size: #{byte_size(buffer)}")
+    log("buffer: #{inspect(buffer)}")
+
+    buffer = prep_buffer(buffer)
+
+    log("Generated buffer of size: #{byte_size(buffer)}")
+    log("buffer: #{inspect(buffer)}")
+    buf_list = :binary.bin_to_list(buffer)
+    |> Enum.chunk_every(448)
+    |> IO.inspect(label: "buf_list (rpihal.ex:150)")
+    # IO.inspect(buffer, label: "buffer (rpihal.ex:149)", limit: :infinity)
+    buf_list
+  end
+
+  defp prep_buffer(buffer) do
+    import Bitwise
+
+    buf_list = :binary.bin_to_list(buffer)
+
+    # Python
+    # buf = ((buf[::2] << 4) & 0xF0) | (buf[1::2] & 0x0F)
+    # Takes every second byte of `buf`, multiplies it by 2^4 (16) and bytewise ands it with 0xF0
+    # 2 << 4 is equivalent to Bitwise.<<<(2, 4)
+    # 17 & 0xF0 is equivalent to Bitwise.&&&(17, 0xF0)
+    # 16 | 0xF is equivalent to Bitwise.|||(16, 0xF)
+    # buf[::2] takes every second byte (starting at index 0)
+    # buf[1::2] takes every second byte (starting at index 1)
+
+    # buf[::2] and buf[1::2]
+    IO.puts("before split")
+    {buf_a, buf_b} = split_buf_list(buf_list)
+    IO.puts("after split")
+    IO.inspect(buf_a, label: "buf_a (rpihal.ex:168)")
+    IO.inspect(buf_b, label: "buf_b (rpihal.ex:169)")
+
+    # (buf[::2] << 4) & 0xF0
+    # high_bytes = (buf_a <<< 4) &&& 0xF0
+
+    high_bytes = for <<byte <- buf_a>>, into: <<>> do
+      <<(byte <<< 4) &&& 0xF0>>
+    end
+    IO.inspect(high_bytes, label: "high_bytes (rpihal.ex:180)")
+
+    # (buf[1::2] & 0x0F)
+    low_bytes = for <<byte <- buf_b>>, into: <<>> do
+      <<byte && 0x0F>>
+    end
+    IO.inspect(low_bytes, label: "low_bytes (rpihal.ex:186)")
+
+
+    # buf = ((buf[::2] << 4) & 0xF0) | (buf[1::2] & 0x0F)
+    binary_bitwise_or(high_bytes, low_bytes)
+    |> :binary.list_to_bin()
+
+    # ((buf[::2] << 4) & 0xF0) | (buf[1::2] & 0x0F)
+    # (|
+    #   (& )
+    #   (buf[::2] << 4) & 0xF0)
+    #   (buf[1::2] & 0x0F)
+
+    # buf = ((buf[::2] << 4) & 0xF0) | (buf[1::2] & 0x0F)
+  end
+
+  def bitwise_map(bin, op) when is_binary(bin) do
+    IO.inspect(bin, label: "bin (rpihal.ex:201)")
+    IO.inspect(op, label: "op (rpihal.ex:202)")
+    for <<byte <- bin>>, into: <<>> do
+      <<op.(byte)>>
+    end
+  end
+
+  def binary_bitwise_or(<<>>, <<>>), do: []
+  def binary_bitwise_or(<<a, rest_a::binary>>, <<b, rest_b::binary>>) do
+    import Bitwise
+    byte = a ||| b
+    [byte | binary_bitwise_or(rest_a, rest_b)]
+  end
+
+  def split_buf_list(buf_list) do
+    {list_a, list_b} =
+    buf_list
+    |> Enum.with_index()
+    |> Enum.split_with(fn {_val, index} -> rem(index, 2) == 0 end)
+
+    {list_a, _indexes} = Enum.unzip(list_a)
+    {list_b, _indexes} = Enum.unzip(list_b)
+
+    {:binary.list_to_bin(list_a), :binary.list_to_bin(list_b)}
   end
 
   #
@@ -136,14 +254,13 @@ defmodule Inky.Impression.RpiHAL do
     Logger.info(msg)
   end
 
-  defp log(_state, msg) when is_binary(msg) do
+  defp log(state, msg) when is_binary(msg) do
     IO.puts(msg)
     Logger.info(msg)
     state
   end
 
   defp do_update(state, display, border, buffer) do
-    IO.inspect(buffer, label: "buffer (rpihal.ex:138)")
     Logger.info("border: #{inspect(border)}")
     border = :red
 
