@@ -21,32 +21,72 @@ defmodule Inky.Impression.RpiHAL do
     :clean => 7
   }
 
+  # PANEL SETTING
   @psr 0x00
+  # POWER SETTING
   @pwr 0x01
+  # POWER OFF
   @pof 0x02
+  # POWER OFF SEQUENCE SETTING
   @pfs 0x03
+  # POWER ON
   @pon 0x04
   @btst 0x06
   @dslp 0x07
+  # DATA START TRANSMISSION 1
   @dtm1 0x10
+  # TODO: Why are we not using the data stop command?
+  # DATA STOP
   @dsp 0x11
+  # DISPLAY REFRESH
   @drf 0x12
   @ipc 0x13
+  # PLL (Phased Lock Loop) CONTROL
+  # https://en.wikipedia.org/wiki/Phase-locked_loop
   @pll 0x30
+  # TEMPERATURE SENSOR CALIBRATION
+  # This command reads the temperature sensed by the temperature sensor.
   @tsc 0x40
+  # TEMPERATURE SENSOR CALIBRATION
+  # This command selects Internal or External temperature sensor.
   @tse 0x41
   @tws 0x42
   @tsr 0x43
+  # VCOM AND DATA INTERVAL SETTING
+  # This command indicates the interval of Vcom and data output. When setting
+  # the vertical back porch, the total blanking will be kept (20 Hsync).
   @cdi 0x50
+  # LOW POWER DETECTION
+  # This command indicates the input power condition. Host can read this flag to learn the battery condition.
   @lpd 0x51
+  # TCON SETTING
+  # This command defines non-overlap period of Gate and Source.
   @tcon 0x60
+  # RESOLUTION SETTING  (TRES)
+  # This command defines alternative resolution and this setting is of higher priority than the RES[1:0] in R00H (PSR).
   @tres 0x61
+  # SPI FLASH CONTROL
+  # This command defines MCU host direct access external memory mode.
+  # This might allow us to specify our own lookup tables! Which might mean our own colors!
   @dam 0x65
+  # REVISION
+  # The REV is read from OTP address = 0x001
   @rev 0x70
+  # GET STATUS
+  # This command reads the IC status.
+  # I2C?
   @flg 0x71
+  # AUTO MEASURE VCOM
+  # This command reads the IC status.
   @amv 0x80
+  # VCOM VALUE
+  # This command gets the Vcom value.
   @vv 0x81
+  # VCM_DC SETTING
+  # This command sets VCOM_DC value.
   @vdcs 0x82
+  # WARN: Not found in datasheet
+  # python driver calls it "UC8159_7C"
   @pws 0xE3
   @tsset 0xE5
 
@@ -98,23 +138,52 @@ defmodule Inky.Impression.RpiHAL do
     # In the python library this is a uint8 which is an unsigned 8-bit integer,
     # which should be similar to a byte in elixir...
     # buffer = gen_buf()
+
+    # 600 x 448
+    # w = 1200
+    # h = 224
+
+    # In order to draw on row/colums in the way we expect we should treat the display as if it was 300x896
+    w = 300
+    h = 896
+
     buffer =
       for y <- 0..(h - 1), x <- 0..(w - 1), into: <<>> do
         cond do
-          #x > 150 && y > 200 -> <<@colors[:orange]>>
+          x > 150 && y > 224 -> <<@colors[:green]::4, @colors[:green]::4>>
+          # y > 20 -> <<@colors[:green]::4, @colors[:green]::4>>
+          x < 100 -> <<@colors[:blue]::4, @colors[:blue]::4>>
           # x > 160 -> <<@colors[:black]>>
-          x > 160 -> <<@colors[:blue]::4, @colors[:blue]::4>>
+          # x > 160 -> <<0::4, @colors[:red]::4>>
           # y > 115 -> <<@colors[:green]>>
-          true -> <<@colors[:white]::4, @colors[:white]::4>>
+          true -> <<@colors[:orange]::4, @colors[:orange]::4>>
           # true -> <<rem(y + 1, @colors[:orange] + 1)>>
         end
         # color = floor(0 / w * 7)
 
         # <<@colors[:yellow]>>
-        # <<7::4,7::4>>
+        # <<@colors[:green]>>
       end
+    # buffer = dup_bytes(buffer)
 
-    # log("Generated buffer of size: #{byte_size(buffer)}")
+    # buffer =
+    #   for y <- 0..(div(h, 3) - 1), x <- 0..(div(w, 3) - 1), into: <<>> do
+    #     cond do
+    #       x > 180 && y > 200 -> <<@colors[:yellow]::4, @colors[:yellow]::4>>
+    #       # x > 160 -> <<@colors[:black]>>
+    #       x > 160 -> <<@colors[:red]::4, @colors[:red]::4>>
+    #       # y > 115 -> <<@colors[:green]>>
+    #       true -> <<@colors[:green]::4, @colors[:green]::4>>
+    #       # true -> <<rem(y + 1, @colors[:orange] + 1)>>
+    #     end
+    #     # color = floor(0 / w * 7)
+
+    #     <<@colors[:blue]::4, @colors[:blue]::4>>
+    #     # <<7::4,7::4>>
+    #   end
+
+    # buffer = [buffer | [buffer2]]
+    log("Generated buffer of size: #{IO.iodata_length(buffer)}")
 
     log("Resetting device")
     reset(state)
@@ -122,6 +191,16 @@ defmodule Inky.Impression.RpiHAL do
     case pre_update(state, push_policy) do
       :cont -> do_update(state, display, border, buffer)
       :halt -> {:error, :device_busy}
+    end
+  end
+
+  def pack_bytes(buffer) do
+    # TODO
+  end
+
+  def dup_bytes(buffer) do
+    for << <<_upper::4, byte::4>> <- buffer>>, into: <<>> do
+      <<byte::4, byte::4>>
     end
   end
 
@@ -138,7 +217,8 @@ defmodule Inky.Impression.RpiHAL do
           # y > 115 -> <<@colors[:green]>>
           x > 300 -> <<@colors[:black]>>
           y > 224 -> <<@colors[:green]>>
-          true -> <<rem(y, @colors[:orange] + 1)>>
+          # true -> <<rem(y, @colors[:orange] + 1)>>
+          true -> <<@colors[:orange]>>
         end
         # color = floor(0 / w * 7)
       end
