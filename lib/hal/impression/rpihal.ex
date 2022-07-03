@@ -21,32 +21,72 @@ defmodule Inky.Impression.RpiHAL do
     :clean => 7
   }
 
+  # PANEL SETTING
   @psr 0x00
+  # POWER SETTING
   @pwr 0x01
+  # POWER OFF
   @pof 0x02
+  # POWER OFF SEQUENCE SETTING
   @pfs 0x03
+  # POWER ON
   @pon 0x04
   @btst 0x06
   @dslp 0x07
+  # DATA START TRANSMISSION 1
   @dtm1 0x10
+  # TODO: Why are we not using the data stop command?
+  # DATA STOP
   @dsp 0x11
+  # DISPLAY REFRESH
   @drf 0x12
   @ipc 0x13
+  # PLL (Phased Lock Loop) CONTROL
+  # https://en.wikipedia.org/wiki/Phase-locked_loop
   @pll 0x30
+  # TEMPERATURE SENSOR CALIBRATION
+  # This command reads the temperature sensed by the temperature sensor.
   @tsc 0x40
+  # TEMPERATURE SENSOR CALIBRATION
+  # This command selects Internal or External temperature sensor.
   @tse 0x41
   @tws 0x42
   @tsr 0x43
+  # VCOM AND DATA INTERVAL SETTING
+  # This command indicates the interval of Vcom and data output. When setting
+  # the vertical back porch, the total blanking will be kept (20 Hsync).
   @cdi 0x50
+  # LOW POWER DETECTION
+  # This command indicates the input power condition. Host can read this flag to learn the battery condition.
   @lpd 0x51
+  # TCON SETTING
+  # This command defines non-overlap period of Gate and Source.
   @tcon 0x60
+  # RESOLUTION SETTING  (TRES)
+  # This command defines alternative resolution and this setting is of higher priority than the RES[1:0] in R00H (PSR).
   @tres 0x61
+  # SPI FLASH CONTROL
+  # This command defines MCU host direct access external memory mode.
+  # This might allow us to specify our own lookup tables! Which might mean our own colors!
   @dam 0x65
+  # REVISION
+  # The REV is read from OTP address = 0x001
   @rev 0x70
+  # GET STATUS
+  # This command reads the IC status.
+  # I2C?
   @flg 0x71
+  # AUTO MEASURE VCOM
+  # This command reads the IC status.
   @amv 0x80
+  # VCOM VALUE
+  # This command gets the Vcom value.
   @vv 0x81
+  # VCM_DC SETTING
+  # This command sets VCOM_DC value.
   @vdcs 0x82
+  # WARN: Not found in datasheet
+  # python driver calls it "UC8159_7C"
   @pws 0xE3
   @tsset 0xE5
 
