@@ -132,10 +132,11 @@ defmodule Inky.Impression.RpiHAL do
     display = %Display{width: w, height: h, rotation: r} = state.display
     Logger.info("display: #{inspect(display)}")
     IO.puts("Generating buffer...")
-
     buffer = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map)
     log("Resetting device")
     reset(state)
+    # Note: soft_reset doesn't perform any differently than reset
+    # soft_reset(state)
 
     case pre_update(state, push_policy) do
       :cont -> do_update(state, display, border, buffer)
@@ -171,7 +172,6 @@ defmodule Inky.Impression.RpiHAL do
   end
 
   defp do_update(state, display, border, buffer) do
-    IO.inspect(buffer, label: "buffer (rpihal.ex:138)")
     Logger.info("border: #{inspect(border)}")
     border = :black
     d_pd = display.packed_dimensions
@@ -258,6 +258,10 @@ defmodule Inky.Impression.RpiHAL do
   # 0b00000010 = DC-DC converter, 0 = off, 1 = on
   # 0b00000001 = Soft reset, 0 = Reset, 1 = Normal (Default)
   defp set_panel(state), do: write_command(state, @psr, [0b11101111, 0x08])
+  # NOTE: Tried several alternatives below
+  # defp set_panel(state), do: write_command(state, @psr, [Bitwise.<<<(0b11, 6), 0x08])
+  # defp set_panel(state), do: write_command(state, @psr, [0b11000000, 0x08])
+  # TODO: Figure out how panel workks and whether it needs adjustment.
 
   defp set_power(state),
     do:
