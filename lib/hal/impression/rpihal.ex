@@ -243,7 +243,7 @@ defmodule Inky.Impression.RpiHAL do
 
   defp soft_reset(state), do: write_command(state, 0x12)
 
-  # >HH struct.pack, so big-endian, unsigned-sort * 2
+  # >HH struct.pack, so big-endian, unsigned-short * 2
   defp set_resolution(state, packed_resolution),
     do: write_command(state, @tres, packed_resolution)
 
