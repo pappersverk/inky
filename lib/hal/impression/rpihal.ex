@@ -132,20 +132,7 @@ defmodule Inky.Impression.RpiHAL do
     Logger.info("display: #{inspect(display)}")
     IO.puts("Generating buffer...")
 
-    buffer =
-      for y <- 0..(h - 1), x <- 0..(w - 1), into: <<>> do
-        cond do
-          x > 150 && y > 200 -> <<@colors[:orange]>>
-          x > 100 -> <<@colors[:blue]>>
-          y > 100 -> <<@colors[:green]>>
-          true -> <<rem(y, @colors[:orange] + 1)>>
-        end
-        # color = floor(0 / w * 7)
-      end
-
-    log("Generated buffer of size: #{byte_size(buffer)}")
-    log("buffer: #{inspect(buffer)}")
-
+    buffer = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map)
     log("Resetting device")
     reset(state)
 
