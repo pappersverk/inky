@@ -7,7 +7,7 @@ defmodule Inky.MixProject do
       version: "1.0.2",
       elixir: "~> 1.8",
       start_permanent: Mix.env() == :prod,
-      source_url: "https://github.com/jasonmj/inky/",
+      source_url: "https://github.com/pappersverk/inky/",
       deps: deps(),
       docs: docs(),
       package: package()
@@ -26,7 +26,7 @@ defmodule Inky.MixProject do
     [
       # {:circuits_gpio, "~> 1.0"},
       {:circuits_gpio, "~> 0.4"},
-      {:circuits_spi, "~> 1.0", override: true},
+      {:circuits_spi, "~> 1.0"},
       {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
@@ -49,7 +49,7 @@ defmodule Inky.MixProject do
       description:
         "A library to drive the Inky series of eInk displays from Pimoroni. Ported from the original Python project, all Elixir.",
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => "https://github.com/jasonmj/inky"}
+      links: %{"GitHub" => "https://github.com/pappersverk/inky"}
     ]
   end
 end
