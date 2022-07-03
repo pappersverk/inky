@@ -84,6 +84,7 @@ defmodule Inky.Display do
       case type do
         :what -> width
         :phat -> height
+        :impression -> width
         :test_small -> height
       end
 
@@ -94,6 +95,7 @@ defmodule Inky.Display do
     rows =
       case type do
         :what -> height
+        :impression -> height
         :phat -> width
         :test_small -> width
       end
