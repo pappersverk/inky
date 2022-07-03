@@ -9,6 +9,7 @@ defmodule Inky.Impression.RpiHAL do
 
   @behaviour Inky.HAL
 
+  @color_map %{black: 0, white: 1, green: 2, blue: 3, red: 4, yellow: 5, orange: 6, miss: 1}
   @colors %{
     :black => 0,
     :white => 1,
@@ -172,7 +173,7 @@ defmodule Inky.Impression.RpiHAL do
   defp do_update(state, display, border, buffer) do
     IO.inspect(buffer, label: "buffer (rpihal.ex:138)")
     Logger.info("border: #{inspect(border)}")
-    border = :red
+    border = :black
     d_pd = display.packed_dimensions
 
     state
