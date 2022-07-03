@@ -186,10 +186,13 @@ defmodule Inky.Impression.RpiHAL do
     IO.inspect(buffer, label: "buffer (rpihal.ex:138)")
     Logger.info("border: #{inspect(border)}")
     border = :red
+    d_pd = display.packed_dimensions
 
     state
     |> log("setting resolution")
     |> set_resolution(display.packed_resolution)
+    |> log("setting dimensions")
+    |> set_dimensions(d_pd.width, d_pd.height)
     |> log("setting panel")
     |> set_panel()
     |> log("setting power")
@@ -227,6 +230,17 @@ defmodule Inky.Impression.RpiHAL do
     |> log("done")
 
     {:ok, %State{state | setup?: true}}
+  end
+
+  defp set_dimensions(state, width_data, packed_height) do
+    height_data = <<0, 0>> <> packed_height
+    width_data = <<0>> <> width_data
+
+    state
+    # Set RAM X Start/End
+    |> write_command(0x44, width_data)
+    # Set RAM Y Start/End
+    |> write_command(0x45, height_data)
   end
 
   #
