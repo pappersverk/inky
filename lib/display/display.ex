@@ -28,7 +28,6 @@ defmodule Inky.Display do
       height: height,
       packed_resolution:
         <<width::unsigned-big-integer-size(16)>> <> <<height::unsigned-big-integer-size(16)>>,
-      packed_dimensions: packed_dimensions(type, width, height),
       rotation: 0,
       accent: nil
     }
@@ -84,7 +83,6 @@ defmodule Inky.Display do
       case type do
         :what -> width
         :phat -> height
-        :impression -> width
         :test_small -> height
       end
 
@@ -95,7 +93,6 @@ defmodule Inky.Display do
     rows =
       case type do
         :what -> height
-        :impression -> height
         :phat -> width
         :test_small -> width
       end
