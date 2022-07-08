@@ -132,7 +132,7 @@ defmodule Inky.Impression.RpiHAL do
     display = %Display{width: w, height: h, rotation: r} = state.display
     Logger.info("display: #{inspect(display)}")
     IO.puts("Generating buffer...")
-    buffer = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map)
+    buffer = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map, 4)
     log("Resetting device")
     reset(state)
 
