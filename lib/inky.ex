@@ -41,7 +41,7 @@ defmodule Inky do
     {:ok, pid} = Inky.start_link(:impression, name: Inky.Foo)
     IO.puts("Started... #{inspect(pid)}")
 
-    IO.puts("Seting pixels...")
+    IO.puts("Setting pixels...")
     Inky.set_pixels(Inky.Foo, %{})
   end
 

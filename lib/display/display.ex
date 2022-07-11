@@ -19,13 +19,17 @@ defmodule Inky.Display do
 
   @spec spec_for(:impression) :: Inky.Display.t()
   def spec_for(type = :impression) do
+    width = 600
+    height = 448
+
     %__MODULE__{
       type: type,
-      width: 600,
-      height: 448,
-      packed_resolution: <<2, 88, 1, 192>>, # I used the struct.pack in Python to generate this
+      width: width,
+      height: height,
+      packed_resolution:
+        <<width::unsigned-big-integer-size(16)>> <> <<height::unsigned-big-integer-size(16)>>,
       rotation: 0,
-      accent: nil,
+      accent: nil
     }
   end
 

@@ -9,6 +9,7 @@ defmodule Inky.Impression.RpiHAL do
 
   @behaviour Inky.HAL
 
+  @color_map %{black: 0, white: 1, green: 2, blue: 3, red: 4, yellow: 5, orange: 6, miss: 1}
   @colors %{
     :black => 0,
     :white => 1,
@@ -21,32 +22,72 @@ defmodule Inky.Impression.RpiHAL do
     :clean => 7
   }
 
+  # PANEL SETTING
   @psr 0x00
+  # POWER SETTING
   @pwr 0x01
+  # POWER OFF
   @pof 0x02
+  # POWER OFF SEQUENCE SETTING
   @pfs 0x03
+  # POWER ON
   @pon 0x04
   @btst 0x06
   @dslp 0x07
+  # DATA START TRANSMISSION 1
   @dtm1 0x10
+  # TODO: Why are we not using the data stop command?
+  # DATA STOP
   @dsp 0x11
+  # DISPLAY REFRESH
   @drf 0x12
   @ipc 0x13
+  # PLL (Phased Lock Loop) CONTROL
+  # https://en.wikipedia.org/wiki/Phase-locked_loop
   @pll 0x30
+  # TEMPERATURE SENSOR CALIBRATION
+  # This command reads the temperature sensed by the temperature sensor.
   @tsc 0x40
+  # TEMPERATURE SENSOR CALIBRATION
+  # This command selects Internal or External temperature sensor.
   @tse 0x41
   @tws 0x42
   @tsr 0x43
+  # VCOM AND DATA INTERVAL SETTING
+  # This command indicates the interval of Vcom and data output. When setting
+  # the vertical back porch, the total blanking will be kept (20 Hsync).
   @cdi 0x50
+  # LOW POWER DETECTION
+  # This command indicates the input power condition. Host can read this flag to learn the battery condition.
   @lpd 0x51
+  # TCON SETTING
+  # This command defines non-overlap period of Gate and Source.
   @tcon 0x60
+  # RESOLUTION SETTING  (TRES)
+  # This command defines alternative resolution and this setting is of higher priority than the RES[1:0] in R00H (PSR).
   @tres 0x61
+  # SPI FLASH CONTROL
+  # This command defines MCU host direct access external memory mode.
+  # This might allow us to specify our own lookup tables! Which might mean our own colors!
   @dam 0x65
+  # REVISION
+  # The REV is read from OTP address = 0x001
   @rev 0x70
+  # GET STATUS
+  # This command reads the IC status.
+  # I2C?
   @flg 0x71
+  # AUTO MEASURE VCOM
+  # This command reads the IC status.
   @amv 0x80
+  # VCOM VALUE
+  # This command gets the Vcom value.
   @vv 0x81
+  # VCM_DC SETTING
+  # This command sets VCOM_DC value.
   @vdcs 0x82
+  # WARN: Not found in datasheet
+  # python driver calls it "UC8159_7C"
   @pws 0xE3
   @tsset 0xE5
 
@@ -91,21 +132,7 @@ defmodule Inky.Impression.RpiHAL do
     display = %Display{width: w, height: h, rotation: r} = state.display
     Logger.info("display: #{inspect(display)}")
     IO.puts("Generating buffer...")
-
-    buffer =
-      for y <- 0..(h - 1), x <- 0..(w - 1), into: <<>> do
-        cond do
-          x > 150 && y > 200 -> <<@colors[:orange]>>
-          x > 100 -> <<@colors[:blue]>>
-          y > 100 -> <<@colors[:green]>>
-          true -> <<rem(y, @colors[:orange] + 1)>>
-        end
-        # color = floor(0 / w * 7)
-      end
-
-    log("Generated buffer of size: #{byte_size(buffer)}")
-    log("buffer: #{inspect(buffer)}")
-
+    buffer = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map, 4)
     log("Resetting device")
     reset(state)
 
@@ -136,17 +163,13 @@ defmodule Inky.Impression.RpiHAL do
     Logger.info(msg)
   end
 
-  defp log(_state, msg) when is_binary(msg) do
+  defp log(state, msg) when is_binary(msg) do
     IO.puts(msg)
     Logger.info(msg)
     state
   end
 
   defp do_update(state, display, border, buffer) do
-    IO.inspect(buffer, label: "buffer (rpihal.ex:138)")
-    Logger.info("border: #{inspect(border)}")
-    border = :red
-
     state
     |> log("setting resolution")
     |> set_resolution(display.packed_resolution)
@@ -203,7 +226,7 @@ defmodule Inky.Impression.RpiHAL do
 
   defp soft_reset(state), do: write_command(state, 0x12)
 
-  # >HH struct.pack, so big-endian, unsigned-sort * 2
+  # >HH struct.pack, so big-endian, unsigned-short * 2
   defp set_resolution(state, packed_resolution),
     do: write_command(state, @tres, packed_resolution)
 
