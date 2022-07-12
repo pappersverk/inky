@@ -1,4 +1,6 @@
 defmodule Inky.Impression.RpiHAL do
+  use Bitwise
+
   @default_io_mod Inky.Impression.RpiIO
 
   @moduledoc """
@@ -19,7 +21,7 @@ defmodule Inky.Impression.RpiHAL do
     :yellow => 5,
     :orange => 6,
     # Not a color, but is used to clear the display
-    :clean => 7
+    :clear => 7
   }
 
   # PANEL SETTING
@@ -32,34 +34,14 @@ defmodule Inky.Impression.RpiHAL do
   @pfs 0x03
   # POWER ON
   @pon 0x04
-  @btst 0x06
-  @dslp 0x07
   # DATA START TRANSMISSION 1
   @dtm1 0x10
-  # TODO: Why are we not using the data stop command?
-  # DATA STOP
-  @dsp 0x11
   # DISPLAY REFRESH
   @drf 0x12
-  @ipc 0x13
-  # PLL (Phased Lock Loop) CONTROL
-  # https://en.wikipedia.org/wiki/Phase-locked_loop
-  @pll 0x30
-  # TEMPERATURE SENSOR CALIBRATION
-  # This command reads the temperature sensed by the temperature sensor.
-  @tsc 0x40
-  # TEMPERATURE SENSOR CALIBRATION
-  # This command selects Internal or External temperature sensor.
-  @tse 0x41
-  @tws 0x42
-  @tsr 0x43
   # VCOM AND DATA INTERVAL SETTING
   # This command indicates the interval of Vcom and data output. When setting
   # the vertical back porch, the total blanking will be kept (20 Hsync).
   @cdi 0x50
-  # LOW POWER DETECTION
-  # This command indicates the input power condition. Host can read this flag to learn the battery condition.
-  @lpd 0x51
   # TCON SETTING
   # This command defines non-overlap period of Gate and Source.
   @tcon 0x60
@@ -70,26 +52,9 @@ defmodule Inky.Impression.RpiHAL do
   # This command defines MCU host direct access external memory mode.
   # This might allow us to specify our own lookup tables! Which might mean our own colors!
   @dam 0x65
-  # REVISION
-  # The REV is read from OTP address = 0x001
-  @rev 0x70
-  # GET STATUS
-  # This command reads the IC status.
-  # I2C?
-  @flg 0x71
-  # AUTO MEASURE VCOM
-  # This command reads the IC status.
-  @amv 0x80
-  # VCOM VALUE
-  # This command gets the Vcom value.
-  @vv 0x81
-  # VCM_DC SETTING
-  # This command sets VCOM_DC value.
-  @vdcs 0x82
   # WARN: Not found in datasheet
   # python driver calls it "UC8159_7C"
   @pws 0xE3
-  @tsset 0xE5
 
   require Logger
 
@@ -130,10 +95,7 @@ defmodule Inky.Impression.RpiHAL do
   @impl HAL
   def handle_update(pixels, border, push_policy, state = %State{}) do
     display = %Display{width: w, height: h, rotation: r} = state.display
-    Logger.info("display: #{inspect(display)}")
-    IO.puts("Generating buffer...")
     buffer = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map, 4)
-    log("Resetting device")
     reset(state)
 
     case pre_update(state, push_policy) do
@@ -158,56 +120,26 @@ defmodule Inky.Impression.RpiHAL do
     end
   end
 
-  defp log(msg) when is_binary(msg) do
-    IO.puts(msg)
-    Logger.info(msg)
-  end
-
-  defp log(state, msg) when is_binary(msg) do
-    IO.puts(msg)
-    Logger.info(msg)
-    state
-  end
-
   defp do_update(state, display, border, buffer) do
     state
-    |> log("setting resolution")
     |> set_resolution(display.packed_resolution)
-    |> log("setting panel")
     |> set_panel()
-    |> log("setting power")
     |> set_power()
-    |> log("setting pll")
     |> set_pll_clock_frequency()
-    |> log("set tse register")
     |> set_tse_register()
-    |> log("set vcom")
     |> set_vcom_data_interval_setting(border)
-    |> log("set gate")
     |> set_gate_source_non_overlap_period()
-    |> log("disable external flash")
     |> disable_external_flash()
-    |> log("set pws")
     |> set_pws_whatever_that_means()
-    |> log("power off seq")
     |> power_off_sequence()
-    |> log("push pixels")
     |> push_pixel_buffer(buffer)
-    |> log("await")
     |> await_device()
-    |> log("pon")
     |> pon()
-    |> log("await")
     |> await_device()
-    |> log("drf")
     |> drf()
-    |> log("await")
     |> await_device()
-    |> log("pof")
     |> pof()
-    |> log("await")
     |> await_device()
-    |> log("done")
 
     {:ok, %State{state | setup?: true}}
   end
@@ -223,8 +155,6 @@ defmodule Inky.Impression.RpiHAL do
     |> set_reset(1)
     |> sleep(100)
   end
-
-  defp soft_reset(state), do: write_command(state, 0x12)
 
   # >HH struct.pack, so big-endian, unsigned-short * 2
   defp set_resolution(state, packed_resolution),
@@ -243,24 +173,16 @@ defmodule Inky.Impression.RpiHAL do
   defp set_power(state),
     do:
       write_command(state, @pwr, [
-        Bitwise.bor(
-          Bitwise.bor(
-            Bitwise.bor(
-              # ??? - not documented in UC8159 datasheet
-              Bitwise.<<<(0x06, 3),
-              # SOURCE_INTERNAL_DC_DC
-              Bitwise.<<<(0x01, 2)
-            ),
-            # GATE_INTERNAL_DC_DC
-            Bitwise.<<<(0x01, 1)
-          ),
-          # LV_SOURCE_INTERNAL_DC_DC
-          0x01
-        ),
+        # ??? - not documented in UC8159 datasheet
+        0x06 <<< 3
+        # SOURCE_INTERNAL_DC_DC
+        |> bor(0x01 <<< 2)
+        # GATE_INTERNAL_DC_DC
+        |> bor(0x01 <<< 1)
+        # LV_SOURCE_INTERNAL_DC_DC
+        |> bor(0x01),
         # VGx_20V
         0x00,
-        # UC8159_7C
-        0x23,
         # UC8159_7C
         0x23
       ])
@@ -277,7 +199,7 @@ defmodule Inky.Impression.RpiHAL do
   defp set_tse_register(state), do: write_command(state, 0x00)
 
   defp set_vcom_data_interval_setting(state, border),
-    do: write_command(state, @cdi, [Bitwise.bor(Bitwise.<<<(@colors[border], 5), 0x17)])
+    do: write_command(state, @cdi, [bor(@colors[border] <<< 5, 0x17)])
 
   defp set_gate_source_non_overlap_period(state), do: write_command(state, @tcon, 0x22)
   defp disable_external_flash(state), do: write_command(state, @dam, 0x00)

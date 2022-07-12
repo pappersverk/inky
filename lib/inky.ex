@@ -34,25 +34,10 @@ defmodule Inky do
   #
   # API
   #
-  def go, do: 45
-
-  def impress do
-    IO.puts("Starting impression")
-    {:ok, pid} = Inky.start_link(:impression, name: Inky.Foo)
-    IO.puts("Started... #{inspect(pid)}")
-
-    IO.puts("Setting pixels...")
-    Inky.set_pixels(Inky.Foo, %{})
-  end
-
-  def start_link(type, opts) when is_list(opts) do
-    genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
-    GenServer.start_link(__MODULE__, [type, opts], genserver_opts)
-  end
 
   @doc """
   Start an Inky GenServer for a display of type `type`, with the color `accent`
-  using the optionally provided options `opts`.
+  (not needed for Inky Impression) using the optionally provided options `opts`.
 
   The GenServer deals with the HAL state and pushing pixels to the physical
   display.
@@ -70,6 +55,11 @@ defmodule Inky do
 
   See `GenServer.start_link/3` for return values.
   """
+  def start_link(type, opts) when is_list(opts) do
+    genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
+    GenServer.start_link(__MODULE__, [type, opts], genserver_opts)
+  end
+
   def start_link(type, accent, opts \\ %{}) do
     genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
     GenServer.start_link(__MODULE__, [type, accent, opts], genserver_opts)
@@ -206,16 +196,7 @@ defmodule Inky do
   end
 
   def handle_call(:push, _from, state) do
-    result = push(:await, state)
-
-    state =
-      case result do
-        :ok -> state
-        {:error, _} -> state
-        {:ok, state} -> state
-      end
-
-    {:reply, result, state}
+    {:reply, push(:await, state), state}
   end
 
   def handle_call(request, from, state) do
@@ -227,13 +208,7 @@ defmodule Inky do
 
   @impl GenServer
   def handle_cast(:push, state) do
-    state =
-      case push(:await, state) do
-        :ok -> state
-        {:error, _} -> state
-        {:ok, state} -> state
-      end
-
+    push(:await, state)
     {:noreply, state}
   end
 

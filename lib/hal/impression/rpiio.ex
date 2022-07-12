@@ -17,7 +17,7 @@ defmodule Inky.Impression.RpiIO do
       :busy_pid,
       :dc_pid,
       :reset_pid,
-      :spi_pid,
+      :spi_pid
       # The python library uses a CS pin but we haven't been able to use pin 8 as a CS pin
       # :cs_pid
     ]
@@ -25,7 +25,6 @@ defmodule Inky.Impression.RpiIO do
     @enforce_keys @state_fields
     defstruct @state_fields
   end
-
 
   @default_palette [
     [57, 48, 57],
@@ -51,7 +50,7 @@ defmodule Inky.Impression.RpiIO do
     reset_pin: @reset_pin
   }
 
-  @spi_speed_hz 3000000
+  @spi_speed_hz 3_000_000
   @spi_command 0
   @spi_data 1
   @spi_chunk_bytes 4096
@@ -72,8 +71,6 @@ defmodule Inky.Impression.RpiIO do
 
     spi_address = "spidev0." <> to_string(pin_mappings[:spi])
 
-    IO.inspect(pin_mappings)
-    # MAYBE_DO: Open CS pin
     IO.puts("opening DC pin")
     {:ok, dc_pid} = gpio.open(pin_mappings[:dc_pin], :output, initial_value: 0)
     IO.puts("opening reset pin")
@@ -93,7 +90,6 @@ defmodule Inky.Impression.RpiIO do
       reset_pid: reset_pid,
       spi_pid: spi_pid
     }
-    |> IO.inspect(label: "init complete")
   end
 
   @impl InkyIO
@@ -139,10 +135,12 @@ defmodule Inky.Impression.RpiIO do
     # MAYBE_DO: Write a 0 to CS pin
     :ok = gpio_call(state, :write, [state.dc_pid, data_or_command])
 
-    result = case spi_call(state, :transfer, [state.spi_pid, value]) do
-      {:ok, response} -> {:ok, response}
-      {:error, :transfer_failed} -> spi_call_chunked(state, value)
-    end
+    result =
+      case spi_call(state, :transfer, [state.spi_pid, value]) do
+        {:ok, response} -> {:ok, response}
+        {:error, :transfer_failed} -> spi_call_chunked(state, value)
+      end
+
     # MAYBE_DO: Write a 1 to CS pin
   end
 

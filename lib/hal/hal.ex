@@ -12,5 +12,5 @@ defmodule Inky.HAL do
               policy :: :await | :once,
               state :: Inky.IOCommands.State.t()
             ) ::
-              io_state() | :ok | {:error, :device_busy}
+              :ok | {:error, :device_busy}
 end

@@ -7,7 +7,7 @@ defmodule Inky.Display do
 
   @type t() :: %__MODULE__{}
 
-  @enforce_keys [:type, :width, :height, :rotation, :accent]
+  @enforce_keys [:type, :width, :height, :packed_dimensions, :rotation, :accent, :luts]
   defstruct type: nil,
             width: 0,
             height: 0,
@@ -26,10 +26,12 @@ defmodule Inky.Display do
       type: type,
       width: width,
       height: height,
+      packed_dimensions: %{},
       packed_resolution:
         <<width::unsigned-big-integer-size(16)>> <> <<height::unsigned-big-integer-size(16)>>,
       rotation: 0,
-      accent: nil
+      accent: nil,
+      luts: <<>>
     }
   end
 
@@ -99,33 +101,5 @@ defmodule Inky.Display do
 
     # Little endian, unsigned short
     <<rows::unsigned-little-integer-16>>
-  end
-
-  # colorsets from pimoroni library
-  # https://github.com/pimoroni/inky/blob/54684464b2f35bfd52208cdfb922c09685644181/library/inky/inky_uc8159.py#L26-L46
-  defp get_colorset(:desaturated) do
-    [
-      [0, 0, 0],
-      [255, 255, 255],
-      [0, 255, 0],
-      [0, 0, 255],
-      [255, 0, 0],
-      [255, 255, 0],
-      [255, 140, 0],
-      [255, 255, 255]
-    ]
-  end
-
-  defp get_colorset(:saturated) do
-    [
-      [57, 48, 57],
-      [255, 255, 255],
-      [58, 91, 70],
-      [61, 59, 94],
-      [156, 72, 75],
-      [208, 190, 71],
-      [177, 106, 73],
-      [255, 255, 255]
-    ]
   end
 end
