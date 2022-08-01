@@ -3,8 +3,8 @@ defmodule Inky.Buttons do
   The Inky Impression has 4 buttons that are monitored independently from the display
   and can be started in supervison.
 
-  Supply the `:handler` option as either a pid, or `{module, function, args}` tuple
-  specifying when to send events to. If no handler is supplied, events are simply logged
+  Supply the `:handler` option as an atom, a pid, or `{module, function, args}` tuple
+  specifying where to send events to. If no handler is supplied, events are simply logged
 
   ```elixir
   Inky.Buttons.start_link(handler: self())
@@ -51,7 +51,7 @@ defmodule Inky.Buttons do
 
   Options:
 
-  * `:handler` - pass a pid or an MFA to receive button events
+  * `:handler` - pass an atom, a pid, or an MFA to receive button events
   """
   @spec start_link(keyword) :: GenServer.on_start()
   def start_link(opts \\ []) do
@@ -123,6 +123,8 @@ defmodule Inky.Buttons do
   end
 
   def handle_info(_other, state), do: {:noreply, state}
+
+  defp send_event(handler, event) when is_atom(handler), do: send(handler, event)
 
   defp send_event(handler, event) when is_pid(handler), do: send(handler, event)
 
