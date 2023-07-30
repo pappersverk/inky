@@ -55,10 +55,6 @@ defmodule Inky.Impression.RpiIO do
   @spi_data 1
   @spi_chunk_bytes 4096
 
-  @resolution %{
-    {600, 448} => {600, 448, 0, 0, 0}
-  }
-
   @border :white
 
   # API

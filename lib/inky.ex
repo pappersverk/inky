@@ -178,6 +178,22 @@ defmodule Inky do
      }}
   end
 
+  def init([:impression_7_3 = type, opts]) do
+    border = opts[:border] || @default_border
+    hal_mod = opts[:hal_mod] || ImpressionHAL
+
+    display = Display.spec_for(type)
+    hal_state = hal_mod.init(%{display: display})
+
+    {:ok,
+     %State{
+       border: border,
+       display: display,
+       hal_mod: hal_mod,
+       hal_state: hal_state
+     }}
+  end
+
   # GenServer calls
 
   @impl GenServer

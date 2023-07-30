@@ -17,6 +17,24 @@ defmodule Inky.Display do
             accent: :black,
             luts: <<>>
 
+  @spec spec_for(:impression_7_3) :: Inky.Display.t()
+  def spec_for(type = :impression_7_3) do
+    width = 800
+    height = 480
+
+    %__MODULE__{
+      type: type,
+      width: width,
+      height: height,
+      packed_dimensions: %{},
+      packed_resolution:
+        <<width::unsigned-big-integer-size(16)>> <> <<height::unsigned-big-integer-size(16)>>,
+      rotation: 0,
+      accent: nil,
+      luts: <<>>
+    }
+  end
+
   @spec spec_for(:impression) :: Inky.Display.t()
   def spec_for(type = :impression) do
     width = 600
