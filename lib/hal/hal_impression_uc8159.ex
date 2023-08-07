@@ -1,7 +1,7 @@
-defmodule Inky.Impression.RpiHAL do
-  use Bitwise
+defmodule Inky.HAL.ImpressionUC8159 do
+  import Bitwise
 
-  @default_io_mod Inky.Impression.RpiIO
+  @default_io_mod Inky.IO.Impression
 
   @moduledoc """
   An `Inky.HAL` implementation responsible for sending commands to the Inky
@@ -31,27 +31,13 @@ defmodule Inky.Impression.RpiHAL do
   # POWER OFF
   @pof 0x02
   # POWER OFF SEQUENCE SETTING
-  @pofs 0x03
+  @pfs 0x03
   # POWER ON
   @pon 0x04
-
-  # BTST1
-  @btst1 0x05
-  @btst2 0x06
-  # @dslp 0x07
-  @btst3 0x08
-
   # DATA START TRANSMISSION 1
-  @dtm 0x10
+  @dtm1 0x10
   # DISPLAY REFRESH
   @drf 0x12
-
-  #?
-  @ipc 0x13
-
-  #?
-  @tse 0x41
-
   # VCOM AND DATA INTERVAL SETTING
   # This command indicates the interval of Vcom and data output. When setting
   # the vertical back porch, the total blanking will be kept (20 Hsync).
@@ -66,17 +52,9 @@ defmodule Inky.Impression.RpiHAL do
   # This command defines MCU host direct access external memory mode.
   # This might allow us to specify our own lookup tables! Which might mean our own colors!
   @dam 0x65
-
-  # New in impression_7_3
-  @vdcs 0x82
-  @t_vdcs 0x84
-  @agid 0x86
-  @cmdh 0xAA
-  # @ccset 0xE0
-
-  @ccset 0xE0
+  # WARN: Not found in datasheet
+  # python driver calls it "UC8159_7C"
   @pws 0xE3
-  @tsset 0xE6
 
   require Logger
 
@@ -116,7 +94,6 @@ defmodule Inky.Impression.RpiHAL do
 
   @impl HAL
   def handle_update(pixels, border, push_policy, state = %State{}) do
-    Logger.info("push_policy: #{inspect(push_policy, pretty: true)}")
     display = %Display{width: w, height: h, rotation: r} = state.display
     buffer = PixelUtil.pixels_to_bits(pixels, w, h, r, @color_map, 4)
     reset(state)
@@ -143,59 +120,26 @@ defmodule Inky.Impression.RpiHAL do
     end
   end
 
-  defp do_update(state, _display, _border, buffer) do
+  defp do_update(state, display, border, buffer) do
     state
-    |> set_cmdh()
-    |> set_power_pwr()
-    |> set_panel_psr()
-    |> power_off_sequence_pofs()
-    |> write_command(@btst1, [0x40, 0x1F, 0x1F, 0x2C])
-    |> write_command(@btst2, [0x6F, 0x1F, 0x16, 0x25])
-    |> write_command(@btst3, [0x6F, 0x1F, 0x1F, 0x22])
-    |> write_command(@ipc, [0x00, 0x04])
+    |> set_resolution(display.packed_resolution)
+    |> set_panel()
+    |> set_power()
     |> set_pll_clock_frequency()
-    |> write_command(@tse, [0x00])
-    # border?
-    # TODO: Combine with `set_vcom_data_interval_setting`
-    |> write_command(@cdi, [0x3F])
-    |> write_command(@tcon, [0x02, 0x00])
-    # resolution?
-    |> write_command(@tres, [0x03, 0x20, 0x01, 0xE0])
-    # |> set_resolution(display.packed_resolution)
-    # cont
-    |> write_command(@vdcs, [0x1E])
-    |> write_command(@t_vdcs, [0x00])
-    |> write_command(@agid, [0x00])
-    |> write_command(@pws, [0x2F])
-    |> write_command(@ccset, [0x00])
-    |> write_command(@tsset, [0x00])
-
-    # End of setup
-    # TODO: Need to force white somehow?
-    # The python driver is doing some bit manipulation before this call
-    # https://github.com/pimoroni/inky/blob/98383c5d47928b90ee3951ed72576b7064e573e7/library/inky/inky_ac073tc1a.py#L300
+    |> set_tse_register()
+    |> set_vcom_data_interval_setting(border)
+    |> set_gate_source_non_overlap_period()
+    |> disable_external_flash()
+    |> set_pws_whatever_that_means()
+    |> power_off_sequence()
     |> push_pixel_buffer(buffer)
+    |> await_device()
     |> pon()
     |> await_device()
     |> drf()
     |> await_device()
     |> pof()
     |> await_device()
-
-
-    # |> set_vcom_data_interval_setting(border)
-    # |> set_gate_source_non_overlap_period()
-    # |> disable_external_flash()
-    # |> set_pws_whatever_that_means()
-    # |> power_off_sequence_pofs()
-    # |> push_pixel_buffer(buffer)
-    # |> await_device()
-    # |> pon()
-    # |> await_device()
-    # |> drf()
-    # |> await_device()
-    # |> pof()
-    # |> await_device()
 
     {:ok, %State{state | setup?: true}}
   end
@@ -210,16 +154,11 @@ defmodule Inky.Impression.RpiHAL do
     |> sleep(100)
     |> set_reset(1)
     |> sleep(100)
-    |> set_reset(0)
-    |> sleep(100)
-    |> set_reset(1)
-    |> sleep(100)
-    # busy wait?
   end
 
   # >HH struct.pack, so big-endian, unsigned-short * 2
-  # defp set_resolution(state, packed_resolution),
-  #   do: write_command(state, @tres, packed_resolution)
+  defp set_resolution(state, packed_resolution),
+    do: write_command(state, @tres, packed_resolution)
 
   # Panel Setting
   # 0b11000000 = Resolution select, 0b00 = 640x480, our panel is 0b11 = 600x448
@@ -229,11 +168,24 @@ defmodule Inky.Impression.RpiHAL do
   # 0b00000100 = Source shift direction, 0 = left, 1 = right (default)
   # 0b00000010 = DC-DC converter, 0 = off, 1 = on
   # 0b00000001 = Soft reset, 0 = Reset, 1 = Normal (Default)
-  defp set_panel_psr(state), do: write_command(state, @psr, [0x5F, 0x69])
+  defp set_panel(state), do: write_command(state, @psr, [0b11101111, 0x08])
 
-  defp set_cmdh(state), do: write_command(state, @cmdh, [0x49, 0x55, 0x20, 0x08, 0x09, 0x18])
-
-  defp set_power_pwr(state), do: write_command(state, @pwr, [0x3F, 0x00, 0x32, 0x2A, 0x0E, 0x2A])
+  defp set_power(state),
+    do:
+      write_command(state, @pwr, [
+        # ??? - not documented in UC8159 datasheet
+        0x06 <<< 3
+        # SOURCE_INTERNAL_DC_DC
+        |> bor(0x01 <<< 2)
+        # GATE_INTERNAL_DC_DC
+        |> bor(0x01 <<< 1)
+        # LV_SOURCE_INTERNAL_DC_DC
+        |> bor(0x01),
+        # VGx_20V
+        0x00,
+        # UC8159_7C
+        0x23
+      ])
 
   # Set the PLL clock frequency to 50Hz
   # 0b11000000 = Ignore
@@ -242,25 +194,26 @@ defmodule Inky.Impression.RpiHAL do
   # PLL = 2MHz * (M / N)
   # PLL = 2MHz * (7 / 4)
   # PLL = 2,800,000 ???
-  defp set_pll_clock_frequency(state), do: write_command(state, [0x02])
+  defp set_pll_clock_frequency(state), do: write_command(state, 0x3C)
 
-  # defp set_vcom_data_interval_setting(state, border),
-  #   do: write_command(state, @cdi, [bor(@colors[border] <<< 5, 0x17)])
+  defp set_tse_register(state), do: write_command(state, 0x00)
 
-  # defp set_gate_source_non_overlap_period(state), do: write_command(state, @tcon, 0x22)
-  # defp disable_external_flash(state), do: write_command(state, @dam, 0x00)
-  # defp set_pws_whatever_that_means(state), do: write_command(state, @pws, 0xAA)
-  defp power_off_sequence_pofs(state), do: write_command(state, @pofs, [0x00, 0x54, 0x00, 0x44])
-  defp push_pixel_buffer(state, buffer), do: write_command(state, @dtm, buffer)
+  defp set_vcom_data_interval_setting(state, border),
+    do: write_command(state, @cdi, [bor(@colors[border] <<< 5, 0x17)])
+
+  defp set_gate_source_non_overlap_period(state), do: write_command(state, @tcon, 0x22)
+  defp disable_external_flash(state), do: write_command(state, @dam, 0x00)
+  defp set_pws_whatever_that_means(state), do: write_command(state, @pws, 0xAA)
+  defp power_off_sequence(state), do: write_command(state, @pfs, 0x00)
+  defp push_pixel_buffer(state, buffer), do: write_command(state, @dtm1, buffer)
   defp pon(state), do: write_command(state, @pon)
-  defp drf(state), do: write_command(state, @drf, [0x00])
-  defp pof(state), do: write_command(state, @pof, [0x00])
+  defp drf(state), do: write_command(state, @drf)
+  defp pof(state), do: write_command(state, @pof)
 
   #
   # waiting
   #
 
-  # busy_wait
   defp await_device(state) do
     case read_busy(state) do
       0 ->

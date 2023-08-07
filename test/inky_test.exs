@@ -1,5 +1,3 @@
-Code.require_file("test/support/testhal.exs")
-
 defmodule Inky.InkyTest do
   @moduledoc false
 
@@ -13,7 +11,7 @@ defmodule Inky.InkyTest do
   doctest Inky
 
   setup_all do
-    init_args = [:test_small, :red, [hal_mod: TestHAL]]
+    init_args = {:test_small, [accent: :red, hal_mod: TestHAL]}
     {:ok, inited_state} = Inky.init(init_args)
 
     receive do

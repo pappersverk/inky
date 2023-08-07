@@ -1,5 +1,5 @@
 defmodule Inky.HAL.PhatSSD1608 do
-  @default_io_mod Inky.RpiIO
+  @default_io_mod Inky.IO.Phat
 
   @moduledoc """
   An `Inky.HAL` implementation responsible for sending commands to the Inky
@@ -10,7 +10,7 @@ defmodule Inky.HAL.PhatSSD1608 do
   @behaviour Inky.HAL
 
   alias Inky.PixelUtil
-  use Bitwise, only_operators: true
+  import Bitwise
 
   @color_map_black %{black: 0, miss: 1}
   @color_map_accent %{red: 1, yellow: 1, accent: 1, miss: 0}

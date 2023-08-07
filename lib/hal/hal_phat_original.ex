@@ -1,5 +1,5 @@
-defmodule Inky.RpiHAL do
-  @default_io_mod Inky.RpiIO
+defmodule Inky.HAL.PhatOriginal do
+  @default_io_mod Inky.IO.Phat
 
   @moduledoc """
   An `Inky.HAL` implementation responsible for sending commands to the Inky
