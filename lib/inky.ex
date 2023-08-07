@@ -147,7 +147,12 @@ defmodule Inky do
   @impl GenServer
   def init([type, accent, opts]) do
     border = opts[:border] || @default_border
-    hal_mod = opts[:hal_mod] || RpiHAL
+
+    hal_mod =
+      case type do
+        :phat_ssd1608 -> opts[:hal_mod] || Inky.HAL.PhatSSD1608
+        _ -> opts[:hal_mod] || RpiHAL
+      end
 
     display = Display.spec_for(type, accent)
     hal_state = hal_mod.init(%{display: display})

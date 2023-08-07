@@ -53,8 +53,21 @@ defmodule Inky.Display do
     }
   end
 
-  @spec spec_for(:phat | :what, :black | :red | :yellow) :: Inky.Display.t()
+  @spec spec_for(:phat_ssd1608 | :phat | :what, :black | :red | :yellow) :: Inky.Display.t()
   def spec_for(type, accent \\ :black)
+
+  def spec_for(type = :phat_ssd1608, accent) do
+    # Keep it minimal. Details are specified in `Inky.HAL.PhatSSD1608`.
+    %__MODULE__{
+      type: type,
+      width: 250,
+      height: 122,
+      packed_dimensions: %{},
+      rotation: -90,
+      accent: accent,
+      luts: <<>>
+    }
+  end
 
   def spec_for(type = :phat, accent) do
     %__MODULE__{

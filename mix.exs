@@ -24,8 +24,9 @@ defmodule Inky.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:circuits_gpio, "~> 0.4 or ~> 1.0"},
-      {:circuits_spi, "~> 1.0"},
+      {:circuits_gpio, "~> 0.4"},
+      {:circuits_spi, "~> 0.1"},
+      {:circuits_i2c, "~> 0.3"},
       {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
