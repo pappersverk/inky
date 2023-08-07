@@ -154,7 +154,7 @@ defmodule Inky.HAL.ImpressionAC073TC1A do
     |> set_pll_clock_frequency()
     |> write_command(@tse, [0x00])
     # border?
-    # TODO: Combine with `set_vcom_data_interval_setting`
+    # Could be combined with `set_vcom_data_interval_setting`?
     |> write_command(@cdi, [0x3F])
     |> write_command(@tcon, [0x02, 0x00])
     # resolution?
@@ -169,7 +169,7 @@ defmodule Inky.HAL.ImpressionAC073TC1A do
     |> write_command(@tsset, [0x00])
 
     # End of setup
-    # TODO: Need to force white somehow?
+    # Need to force white somehow?
     # The python driver is doing some bit manipulation before this call
     # https://github.com/pimoroni/inky/blob/98383c5d47928b90ee3951ed72576b7064e573e7/library/inky/inky_ac073tc1a.py#L300
     |> push_pixel_buffer(buffer)

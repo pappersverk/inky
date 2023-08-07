@@ -32,7 +32,7 @@ defmodule Inky.MixProject do
       {:circuits_gpio, "~> 0.4"},
       {:circuits_spi, "~> 0.1"},
       {:circuits_i2c, "~> 0.3"},
-      {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end

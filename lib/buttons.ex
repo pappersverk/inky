@@ -31,6 +31,9 @@ defmodule Inky.Buttons do
   @type name() :: :a | :b | :x | :y
 
   defmodule Event do
+    @moduledoc """
+    Represents an event from the buttons
+    """
     defstruct [:action, :name, :value, :timestamp]
 
     @type t :: %Event{
