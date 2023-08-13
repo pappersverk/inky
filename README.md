@@ -46,7 +46,7 @@ config in init, adjust accordingly):
 
 ```elixir
 # Start your Inky process ...
-{:ok, pid} = Inky.start_link(:phat_original, accent: :red, name: InkySample)
+{:ok, pid} = Inky.start_link(:phat_il91874, accent: :red, name: InkySample)
 
 painter = fn x, y, w, h, _pixels_so_far ->
   wh = w / 2

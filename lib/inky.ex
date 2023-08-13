@@ -17,7 +17,7 @@ defmodule Inky do
   @push_timeout 5000
   @valid_accents [:black, :red, :yellow]
   @valid_types [
-    :phat_original,
+    :phat_il91874,
     :phat_ssd1608,
     :impression_4,
     :impression_5_7,
@@ -30,7 +30,7 @@ defmodule Inky do
     @enforce_keys [:display, :hal_state]
     defstruct border: :black,
               display: nil,
-              hal_mod: Inky.HAL.PhatOriginal,
+              hal_mod: Inky.HAL.PhatIL91874,
               hal_state: nil,
               pixels: %{},
               type: nil,
@@ -88,7 +88,7 @@ defmodule Inky do
   end
 
   defp verify_required_accent!(type, accent)
-       when type in [:phat_original, :phat_ssd1608, :what] do
+       when type in [:phat_il91874, :phat_ssd1608, :what] do
     if accent in @valid_accents do
       accent
     else
@@ -191,7 +191,7 @@ defmodule Inky do
         opts[:hal_mod]
       else
         case type do
-          :phat_original -> Inky.HAL.PhatOriginal
+          :phat_il91874 -> Inky.HAL.PhatIL91874
           :phat_ssd1608 -> Inky.HAL.PhatSSD1608
           :impression_4 -> Inky.HAL.ImpressionUC8159
           :impression_5_7 -> Inky.HAL.ImpressionUC8159

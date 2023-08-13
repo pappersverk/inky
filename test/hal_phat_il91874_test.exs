@@ -1,10 +1,10 @@
-defmodule Inky.HAL.PhatOriginalTest do
+defmodule Inky.HAL.PhatIL91874Test do
   @moduledoc false
 
   use ExUnit.Case
 
   alias Inky.Display
-  alias Inky.HAL.PhatOriginal
+  alias Inky.HAL.PhatIL91874
   alias Inky.TestIO
 
   import Inky.TestUtil, only: [gather_messages: 0, pos2col: 2]
@@ -19,7 +19,7 @@ defmodule Inky.HAL.PhatOriginalTest do
 
   setup_all do
     pixels =
-      Display.spec_for(:phat_original, :black)
+      Display.spec_for(:phat_il91874, :black)
       |> init_pixels()
 
     %{pixels: pixels}
@@ -27,9 +27,9 @@ defmodule Inky.HAL.PhatOriginalTest do
 
   describe "happy paths" do
     test "that init dispatches properly" do
-      display = Display.spec_for(:phat_original, :black)
+      display = Display.spec_for(:phat_il91874, :black)
       # act
-      PhatOriginal.init(%{
+      PhatIL91874.init(%{
         display: display,
         io_args: [],
         io_mod: TestIO
@@ -42,7 +42,7 @@ defmodule Inky.HAL.PhatOriginalTest do
 
     test "that update dispatches properly when the device is never busy", ctx do
       # arrange, read_busy always returns 0
-      display = Display.spec_for(:phat_original, :black)
+      display = Display.spec_for(:phat_il91874, :black)
 
       init_args = %{
         display: display,
@@ -52,10 +52,10 @@ defmodule Inky.HAL.PhatOriginalTest do
         io_mod: TestIO
       }
 
-      state = PhatOriginal.init(init_args)
+      state = PhatIL91874.init(init_args)
 
       # act
-      :ok = PhatOriginal.handle_update(ctx.pixels, display.accent, :await, state)
+      :ok = PhatIL91874.handle_update(ctx.pixels, display.accent, :await, state)
 
       # assert
       assert_received {:init, _}
@@ -67,7 +67,7 @@ defmodule Inky.HAL.PhatOriginalTest do
 
     test "that update dispatches properly when the device is a little busy", ctx do
       # arrange, read_busy is a little busy each time, we expect two wait-loops.
-      display = Display.spec_for(:phat_original, :black)
+      display = Display.spec_for(:phat_il91874, :black)
 
       init_args = %{
         display: display,
@@ -77,10 +77,10 @@ defmodule Inky.HAL.PhatOriginalTest do
         io_mod: TestIO
       }
 
-      state = PhatOriginal.init(init_args)
+      state = PhatIL91874.init(init_args)
 
       # act
-      :ok = PhatOriginal.handle_update(ctx.pixels, display.accent, :await, state)
+      :ok = PhatIL91874.handle_update(ctx.pixels, display.accent, :await, state)
 
       # assert
       assert_received {:init, _}
@@ -105,46 +105,46 @@ defmodule Inky.HAL.PhatOriginalTest do
     end
 
     test "test border, black accent", ctx do
-      display = Display.spec_for(:phat_original, :black)
+      display = Display.spec_for(:phat_il91874, :black)
       init_black = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
-      black_state = PhatOriginal.init(init_black)
+      black_state = PhatIL91874.init(init_black)
 
       # black accent, black border
-      :ok = PhatOriginal.handle_update(ctx.pixels, :black, :await, black_state)
+      :ok = PhatIL91874.handle_update(ctx.pixels, :black, :await, black_state)
       assert get_border_command() == [send_command: {60, 0}]
 
       # black accent, white border
-      :ok = PhatOriginal.handle_update(ctx.pixels, :white, :await, black_state)
+      :ok = PhatIL91874.handle_update(ctx.pixels, :white, :await, black_state)
       assert get_border_command() == [send_command: {60, 49}]
     end
 
     test "red accent, red border", ctx do
       # arrange
-      display = Display.spec_for(:phat_original, :red)
+      display = Display.spec_for(:phat_il91874, :red)
       init_red = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
-      red_state = PhatOriginal.init(init_red)
+      red_state = PhatIL91874.init(init_red)
 
       # act, explicit border
-      :ok = PhatOriginal.handle_update(ctx.pixels, :red, :await, red_state)
+      :ok = PhatIL91874.handle_update(ctx.pixels, :red, :await, red_state)
       assert get_border_command() == [send_command: {60, 115}]
 
       # act, implicit border
-      :ok = PhatOriginal.handle_update(ctx.pixels, :accent, :await, red_state)
+      :ok = PhatIL91874.handle_update(ctx.pixels, :accent, :await, red_state)
       assert get_border_command() == [send_command: {60, 115}]
     end
 
     test "yellow accent, yellow border", ctx do
       # arrange
-      display = Display.spec_for(:phat_original, :yellow)
+      display = Display.spec_for(:phat_il91874, :yellow)
       init_yellow = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
-      yellow_state = PhatOriginal.init(init_yellow)
+      yellow_state = PhatIL91874.init(init_yellow)
 
       # act, explicit border
-      :ok = PhatOriginal.handle_update(ctx.pixels, :yellow, :await, yellow_state)
+      :ok = PhatIL91874.handle_update(ctx.pixels, :yellow, :await, yellow_state)
       assert get_border_command() == [send_command: {60, 51}]
 
       # act, implicit border
-      :ok = PhatOriginal.handle_update(ctx.pixels, :accent, :await, yellow_state)
+      :ok = PhatIL91874.handle_update(ctx.pixels, :accent, :await, yellow_state)
       assert get_border_command() == [send_command: {60, 51}]
     end
 
@@ -152,19 +152,19 @@ defmodule Inky.HAL.PhatOriginalTest do
       # arrange
       display = Display.spec_for(:what, :yellow)
       init_red = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
-      red_state = PhatOriginal.init(init_red)
+      red_state = PhatIL91874.init(init_red)
 
-      :ok = PhatOriginal.handle_update(ctx.pixels, :accent, :await, red_state)
+      :ok = PhatIL91874.handle_update(ctx.pixels, :accent, :await, red_state)
       assert get_vhs_and_vhl_voltage_command() == [send_command: {0x04, 0x07}]
     end
 
     test "yellow display, phat", ctx do
       # arrange
-      display = Display.spec_for(:phat_original, :yellow)
+      display = Display.spec_for(:phat_il91874, :yellow)
       init_red = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
-      red_state = PhatOriginal.init(init_red)
+      red_state = PhatIL91874.init(init_red)
 
-      :ok = PhatOriginal.handle_update(ctx.pixels, :accent, :await, red_state)
+      :ok = PhatIL91874.handle_update(ctx.pixels, :accent, :await, red_state)
       assert get_vhs_and_vhl_voltage_command() == [send_command: {0x04, 0x07}]
     end
 
@@ -172,9 +172,9 @@ defmodule Inky.HAL.PhatOriginalTest do
       # arrange
       display = Display.spec_for(:what, :red)
       init_red = %{display: display, io_args: [read_busy: 0], io_mod: TestIO}
-      red_state = PhatOriginal.init(init_red)
+      red_state = PhatIL91874.init(init_red)
 
-      :ok = PhatOriginal.handle_update(ctx.pixels, :red, :await, red_state)
+      :ok = PhatIL91874.handle_update(ctx.pixels, :red, :await, red_state)
       assert get_vhs_and_vhl_voltage_command() == [send_command: {0x04, <<0x30, 0xAC, 0x22>>}]
     end
   end

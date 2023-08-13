@@ -72,7 +72,7 @@ defmodule Inky.Display do
     }
   end
 
-  @spec spec_for(:phat_original | :phat_ssd1608 | :what, :black | :red | :yellow) ::
+  @spec spec_for(:phat_il91874 | :phat_ssd1608 | :what, :black | :red | :yellow) ::
           Inky.Display.t()
   def spec_for(type = :phat_ssd1608, accent) do
     # Keep it minimal. Details are specified in `Inky.HAL.PhatSSD1608`.
@@ -87,7 +87,7 @@ defmodule Inky.Display do
     }
   end
 
-  def spec_for(type = :phat_original, accent) do
+  def spec_for(type = :phat_il91874, accent) do
     %__MODULE__{
       type: type,
       width: 212,
@@ -133,7 +133,7 @@ defmodule Inky.Display do
     columns =
       case type do
         :what -> width
-        :phat_original -> height
+        :phat_il91874 -> height
         :test_small -> height
       end
 
@@ -144,7 +144,7 @@ defmodule Inky.Display do
     rows =
       case type do
         :what -> height
-        :phat_original -> width
+        :phat_il91874 -> width
         :test_small -> width
       end
 
