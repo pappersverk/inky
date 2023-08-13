@@ -1,19 +1,21 @@
-defmodule Inky.Buttons do
+defmodule Inky.ImpressionButtons do
   @moduledoc """
-  The Inky Impression has 4 buttons that are monitored independently from the display
-  and can be started in supervison.
+  Adds support for the 4 buttons on the Inky Impressions
+
+  The 4 buttons are monitored independently of the display and can be started in the
+  supervison tree.
 
   Supply the `:handler` option as an atom, a pid, or `{module, function, args}` tuple
-  specifying where to send events to. If no handler is supplied, events are simply logged
+  specifying where to send events to. If no handler is supplied, events are simply logged.
 
   ```elixir
-  Inky.Buttons.start_link(handler: self())
+  Inky.ImpressionButtons.start_link(handler: self())
   ```
 
   You can also query the current value of a button at any time
 
   ```elixir
-  Inky.Buttons.get_value(:a)
+  Inky.ImpressionButtons.get_value(:a)
   ```
   """
 
@@ -38,7 +40,7 @@ defmodule Inky.Buttons do
 
     @type t :: %Event{
             action: :pressed | :released,
-            name: Buttons.name(),
+            name: Inky.ImpressionsButtons.name(),
             value: 1 | 0,
             timestamp: non_neg_integer()
           }
@@ -54,7 +56,9 @@ defmodule Inky.Buttons do
 
   Options:
 
-  * `:handler` - pass an atom, a pid, or an MFA to receive button events
+  * `:handler` - pass an atom a pid, or an MFA to receive button events
+                 MFA stands for Module Function Args, here's an example MFA that would print out the events `{IO, :inspect, []}`
+                 Note: the event will be prepended to the argument list
   """
   @spec start_link(keyword) :: GenServer.on_start()
   def start_link(opts \\ []) do
