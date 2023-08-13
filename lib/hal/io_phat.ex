@@ -1,7 +1,8 @@
 defmodule Inky.IO.Phat do
   @moduledoc """
-  An `Inky.InkyIO` implementation intended for use with raspberry pis and relies on
-  Circuits.GPIO and Cirtuits.SPI.
+  An `Inky.InkyIO` implementation used for the pHATs
+
+  Relies on Circuits.GPIO and Cirtuits.SPI.
   """
 
   @behaviour Inky.InkyIO
