@@ -1,5 +1,3 @@
-Code.require_file("test/support/testhal.exs")
-
 defmodule Inky.InkyTimerTest do
   @moduledoc false
 
@@ -13,14 +11,13 @@ defmodule Inky.InkyTimerTest do
   doctest Inky
 
   setup_all do
-    init_args = [:test_small, :red, [hal_mod: TestHAL]]
-    {:ok, inited_state} = Inky.init(init_args)
+    {:ok, inited_state} = Inky.init({:test_small, accent: :red, hal_mod: TestHAL})
 
     receive do
       {TestHAL, :init} -> :ok
     end
 
-    %{inited_state: inited_state, init_args: init_args}
+    %{inited_state: inited_state}
   end
 
   # AWAIT, timer cleared

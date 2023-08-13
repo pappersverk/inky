@@ -1,5 +1,3 @@
-Code.require_file("test/support/testhal.exs")
-
 defmodule Inky.InkyTest do
   @moduledoc false
 
@@ -13,7 +11,7 @@ defmodule Inky.InkyTest do
   doctest Inky
 
   setup_all do
-    init_args = [:test_small, :red, [hal_mod: TestHAL]]
+    init_args = {:test_small, [accent: :red, hal_mod: TestHAL]}
     {:ok, inited_state} = Inky.init(init_args)
 
     receive do
@@ -52,7 +50,46 @@ defmodule Inky.InkyTest do
       assert state.pixels == %{{1, 2} => :white, {0, 0} => :black, {2, 3} => :red}
     end
 
-    # TODO: painter tests
+    test "assert that painter works", %{inited_state: is} do
+      TestHAL.on_update(:ok)
+
+      painter = fn x, y, w, h, _pixels_so_far ->
+        wh = w / 2
+        hh = h / 2
+
+        case {x >= wh, y >= hh} do
+          {true, true} -> :red
+          {false, true} -> if(rem(x, 2) == 0, do: :black, else: :white)
+          {true, false} -> :black
+          {false, false} -> :white
+        end
+      end
+
+      {:reply, :ok, state} =
+        Inky.handle_call({:set_pixels, painter, %{border: :white}}, :from, is)
+
+      # Flip a few pixels
+      pixels = %{{0, 0} => :black, {3, 49} => :red, {23, 4} => :white}
+      {:reply, :ok, state} = Inky.handle_call({:set_pixels, pixels, %{}}, :from, state)
+
+      expected_pixels = %{
+        {0, 0} => :black,
+        {3, 49} => :red,
+        {23, 4} => :white,
+        {0, 1} => :white,
+        {0, 2} => :black,
+        {0, 3} => :black,
+        {1, 0} => :white,
+        {1, 1} => :white,
+        {1, 2} => :white,
+        {1, 3} => :white,
+        {2, 0} => :black,
+        {2, 1} => :black,
+        {2, 2} => :red
+      }
+
+      assert state.pixels == expected_pixels
+    end
   end
 
   describe "Inky timeout" do

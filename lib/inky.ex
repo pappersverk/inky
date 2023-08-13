@@ -9,13 +9,20 @@ defmodule Inky do
   require Logger
 
   alias Inky.Display
-  alias Inky.RpiHAL
 
   @typedoc "The Inky process name"
   @type name :: atom | {:global, term} | {:via, module, term}
 
   @default_border :black
   @push_timeout 5000
+  @valid_accents [:black, :red, :yellow]
+  @valid_types [
+    :phat_il91874,
+    :phat_ssd1608,
+    :impression_4,
+    :impression_5_7,
+    :impression_7_3
+  ]
 
   defmodule State do
     @moduledoc false
@@ -23,7 +30,7 @@ defmodule Inky do
     @enforce_keys [:display, :hal_state]
     defstruct border: :black,
               display: nil,
-              hal_mod: RpiHAL,
+              hal_mod: Inky.HAL.PhatIL91874,
               hal_state: nil,
               pixels: %{},
               type: nil,
@@ -36,16 +43,16 @@ defmodule Inky do
 
   @doc """
   Start an Inky GenServer for a display of type `type`, with the color `accent`
-  using the optionally provided options `opts`.
+  (not needed for Inky Impression) using the optionally provided options `opts`.
 
   The GenServer deals with the HAL state and pushing pixels to the physical
   display.
 
   ## Parameters
 
-    - `type` - An atom, representing the display type, either `:phat` or `:what`
+    - `type` - An atom, representing the display type, one of `#{inspect(@valid_types)}`
     - `accent` - An atom, representing the display's third color, one of
-      `:black`, `:red` or `:yellow`.
+      `#{inspect(@valid_accents)}`.
 
   ## Options
 
@@ -54,9 +61,44 @@ defmodule Inky do
 
   See `GenServer.start_link/3` for return values.
   """
-  def start_link(type, accent, opts \\ %{}) do
+  def start_link(type, opts) when is_list(opts) do
     genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
-    GenServer.start_link(__MODULE__, [type, accent, opts], genserver_opts)
+    accent = verify_required_accent!(type, opts[:accent])
+    opts = Keyword.put(opts, :accent, accent)
+    GenServer.start_link(__MODULE__, {type, opts}, genserver_opts)
+  end
+
+  # For backwards compatibility
+  def start_link(type, opts) when is_map(opts) do
+    opts = Enum.map(opts, fn {key, val} -> {key, val} end)
+    start_link(type, opts)
+  end
+
+  def start_link(type, accent, opts) when is_list(opts) do
+    genserver_opts = if(opts[:name], do: [name: opts[:name]], else: [])
+    accent = verify_required_accent!(type, accent)
+    opts = Keyword.put(opts, :accent, accent)
+    GenServer.start_link(__MODULE__, {type, opts}, genserver_opts)
+  end
+
+  # For backwards compatibility
+  def start_link(type, accent, opts) when is_map(opts) do
+    opts = Enum.map(opts, fn {key, val} -> {key, val} end)
+    start_link(type, accent, opts)
+  end
+
+  defp verify_required_accent!(type, accent)
+       when type in [:phat_il91874, :phat_ssd1608, :what] do
+    if accent in @valid_accents do
+      accent
+    else
+      raise ":accent is required for the #{type}. And must be one of #{inspect(@valid_accents)}. Received #{inspect(accent)}"
+    end
+  end
+
+  defp verify_required_accent!(type, _accent)
+       when type in [:impression_4, :impression_5_7, :impression_7_3] do
+    :none
   end
 
   @doc """
@@ -139,13 +181,22 @@ defmodule Inky do
   #
 
   @impl GenServer
-  def init([type, accent, opts]) do
+  def init({type, opts}) do
     border = opts[:border] || @default_border
 
+    accent = Access.get(opts, :accent, :none)
+
     hal_mod =
-      case type do
-        :phat_ssd1608 -> opts[:hal_mod] || Inky.HAL.PhatSSD1608
-        _ -> opts[:hal_mod] || RpiHAL
+      if opts[:hal_mod] do
+        opts[:hal_mod]
+      else
+        case type do
+          :phat_il91874 -> Inky.HAL.PhatIL91874
+          :phat_ssd1608 -> Inky.HAL.PhatSSD1608
+          :impression_4 -> Inky.HAL.ImpressionUC8159
+          :impression_5_7 -> Inky.HAL.ImpressionUC8159
+          :impression_7_3 -> Inky.HAL.ImpressionAC073TC1A
+        end
       end
 
     display = Display.spec_for(type, accent)
@@ -285,7 +336,7 @@ defmodule Inky do
 
   # Internals
 
-  defp push(push_policy, state) when not (push_policy in [:await, :once]), do: push(:await, state)
+  defp push(push_policy, state) when push_policy not in [:await, :once], do: push(:await, state)
 
   defp push(push_policy, state) do
     hm = state.hal_mod

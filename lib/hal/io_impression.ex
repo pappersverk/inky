@@ -1,4 +1,4 @@
-defmodule Inky.RpiIO do
+defmodule Inky.IO.Impression do
   @moduledoc """
   An `Inky.InkyIO` implementation intended for use with raspberry pis and relies on
   Circuits.GPIO and Cirtuits.SPI.
@@ -18,25 +18,28 @@ defmodule Inky.RpiIO do
       :dc_pid,
       :reset_pid,
       :spi_pid
+      # The python library uses a CS pin but we haven't been able to use pin 8 as a CS pin
+      # :cs_pid
     ]
 
     @enforce_keys @state_fields
     defstruct @state_fields
   end
 
-  @busy_pin 17
-  @cs0_pin 0
-  @dc_pin 22
   @reset_pin 27
+  @busy_pin 17
+  @dc_pin 22
+  @cs0_pin 8
 
   @default_pin_mappings %{
     busy_pin: @busy_pin,
     cs0_pin: @cs0_pin,
+    spi: 0,
     dc_pin: @dc_pin,
     reset_pin: @reset_pin
   }
 
-  @spi_speed_hz 488_000
+  @spi_speed_hz 3_000_000
   @spi_command 0
   @spi_data 1
   @spi_chunk_bytes 4096
@@ -49,11 +52,15 @@ defmodule Inky.RpiIO do
     spi = opts[:spi_mod] || Inky.TestSPI
     pin_mappings = opts[:pin_mappings] || @default_pin_mappings
 
-    spi_address = "spidev0." <> to_string(pin_mappings[:cs0_pin])
+    spi_address = "spidev0." <> to_string(pin_mappings[:spi])
 
-    {:ok, dc_pid} = gpio.open(pin_mappings[:dc_pin], :output)
-    {:ok, reset_pid} = gpio.open(pin_mappings[:reset_pin], :output)
+    IO.puts("opening DC pin")
+    {:ok, dc_pid} = gpio.open(pin_mappings[:dc_pin], :output, initial_value: 0)
+    IO.puts("opening reset pin")
+    {:ok, reset_pid} = gpio.open(pin_mappings[:reset_pin], :output, initial_value: 1)
+    IO.puts("opening busy pin")
     {:ok, busy_pid} = gpio.open(pin_mappings[:busy_pin], :input)
+    IO.puts("opening SPI device")
     {:ok, spi_pid} = spi.open(spi_address, speed_hz: @spi_speed_hz)
 
     # Use binary pattern matching to pull out the ADC counts (low 10 bits)
@@ -108,12 +115,15 @@ defmodule Inky.RpiIO do
     do: spi_write(state, data_or_command, :erlang.list_to_binary(values))
 
   defp spi_write(state, data_or_command, value) when is_binary(value) do
+    # MAYBE_DO: Write a 0 to CS pin
     :ok = gpio_call(state, :write, [state.dc_pid, data_or_command])
 
     case spi_call(state, :transfer, [state.spi_pid, value]) do
       {:ok, response} -> {:ok, response}
       {:error, :transfer_failed} -> spi_call_chunked(state, value)
     end
+
+    # MAYBE_DO: Write a 1 to CS pin
   end
 
   defp spi_call_chunked(state, value) do

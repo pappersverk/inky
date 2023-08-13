@@ -1,10 +1,13 @@
-defmodule Inky.RpiHAL do
-  @default_io_mod Inky.RpiIO
+defmodule Inky.HAL.PhatIL91874 do
+  @default_io_mod Inky.IO.Phat
 
   @moduledoc """
   An `Inky.HAL` implementation responsible for sending commands to the Inky
   screen. It delegates to whatever IO module its user provides at init, but
   defaults to #{inspect(@default_io_mod)}
+
+  Specific to the IL91874 chip which was in the original batch of pHAT's:
+  https://github.com/pimoroni/inky-phat/blob/4c0ac9ffae25d2ee055f41f1d958c64b17f574bd/library/inkyphat/inky212x104.py#L2
   """
 
   @behaviour Inky.HAL

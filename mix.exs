@@ -5,7 +5,8 @@ defmodule Inky.MixProject do
     [
       app: :inky,
       version: "1.0.2",
-      elixir: "~> 1.8",
+      elixir: "~> 1.9",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       source_url: "https://github.com/pappersverk/inky/",
       deps: deps(),
@@ -21,13 +22,17 @@ defmodule Inky.MixProject do
     ]
   end
 
+  # Specifies which paths to compile per environment.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:circuits_gpio, "~> 0.4"},
-      {:circuits_spi, "~> 0.1"},
-      {:circuits_i2c, "~> 0.3"},
-      {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
+      {:circuits_gpio, "~> 0.4 or ~> 1.0"},
+      {:circuits_spi, "~> 0.1 or ~> 1.0"},
+      {:circuits_i2c, "~> 0.3 or ~> 1.0"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end
